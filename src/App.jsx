@@ -183,7 +183,12 @@ function App() {
 
   const randomize = () => {
     setSeed(Math.random());
-    setColors(prevColors => generateHarmonicPalette(prevColors.length, vibrancy));
+    
+    const vibrancyOptions = ['subtle', 'normal', 'vibrant'];
+    const randomVibrancy = vibrancyOptions[Math.floor(Math.random() * vibrancyOptions.length)];
+    setVibrancy(randomVibrancy);
+
+    setColors(prevColors => generateHarmonicPalette(prevColors.length, randomVibrancy));
 
     // Randomize blur strength between 45 and 100, and ensure blur is enabled
     setBlurStrength(Math.floor(Math.random() * 56) + 45);
