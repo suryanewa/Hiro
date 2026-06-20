@@ -54,21 +54,28 @@ const generateHarmonicPalette = (count, vibrancy = 'vibrant') => {
     let h, s, l;
     
     if (vibrancy === 'subtle') {
-      s = 20 + Math.random() * 30; // 20-50%
-      l = 60 + Math.random() * 30; // 60-90%
+      s = 15 + Math.random() * 20; // 15-35%
+      l = 75 + Math.random() * 15; // 75-90%
     } else if (vibrancy === 'normal') {
-      s = 40 + Math.random() * 40; // 40-80%
-      l = 40 + Math.random() * 40; // 40-80%
+      s = 45 + Math.random() * 25; // 45-70%
+      l = 50 + Math.random() * 20; // 50-70%
     } else {
       // vibrant
-      s = 70 + Math.random() * 30; // 70-100%
-      l = 40 + Math.random() * 30; // 40-70%
+      s = 85 + Math.random() * 15; // 85-100%
+      l = 35 + Math.random() * 20; // 35-55%
     }
     
     // Introduce an occasional dark or very light accent color for contrast
     if (i === count - 1 && Math.random() > 0.5) {
-       l = Math.random() > 0.5 ? 15 + Math.random() * 10 : 85 + Math.random() * 10;
-       s = vibrancy === 'subtle' ? s : 80 + Math.random() * 20;
+       if (vibrancy === 'subtle') {
+         l = 85 + Math.random() * 10;
+       } else if (vibrancy === 'normal') {
+         l = Math.random() > 0.5 ? 20 + Math.random() * 10 : 80 + Math.random() * 10;
+         s = 50 + Math.random() * 20;
+       } else {
+         l = Math.random() > 0.5 ? 10 + Math.random() * 10 : 90 + Math.random() * 8;
+         s = 85 + Math.random() * 15;
+       }
     }
 
     if (scheme === 0) {
@@ -84,8 +91,16 @@ const generateHarmonicPalette = (count, vibrancy = 'vibrant') => {
       h = (h + (Math.random() * 20 - 10)) % 360;
     } else {
       h = (baseHue + (Math.random() * 20 - 10)) % 360;
-      s = 50 + Math.random() * 50;
-      l = 20 + (i * (60 / Math.max(1, count - 1))) + (Math.random() * 10 - 5);
+      if (vibrancy === 'subtle') {
+        s = Math.max(10, s - (i * 3));
+        l = Math.min(95, l - (i * 3));
+      } else if (vibrancy === 'normal') {
+        s = Math.max(25, s - (i * 5));
+        l = Math.max(30, Math.min(85, l + (i * 8) - 12));
+      } else {
+        s = Math.max(50, s - (i * 5));
+        l = Math.max(15, Math.min(85, l + (i * 12) - 18));
+      }
     }
     
     if (h < 0) h += 360;
