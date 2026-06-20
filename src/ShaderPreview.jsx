@@ -54,6 +54,8 @@ const ShaderPreview = forwardRef(({ shaderType, presetName, imageUrl, width, hei
           width={width}
           height={height}
           {...(preset?.params || {})}
+          fit="cover"
+          scale={1}
           style={{ width: '100%', height: '100%', display: 'block' }}
         />
       ) : (

@@ -89,6 +89,20 @@ function App() {
     setColors(prevColors => prevColors.map(() => 
       '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')
     ));
+
+    const shaderTypes = ['none', 'paper-texture', 'fluted-glass', 'water', 'image-dithering', 'halftone-dots', 'halftone-cmyk'];
+    const randomShader = shaderTypes[Math.floor(Math.random() * shaderTypes.length)];
+    setActiveShader(randomShader);
+
+    if (randomShader !== 'none') {
+      const presets = SHADER_PRESETS[randomShader];
+      if (presets && presets.length > 0) {
+        const randomPreset = presets[Math.floor(Math.random() * presets.length)];
+        setActivePreset(randomPreset.name);
+      }
+    } else {
+      setActivePreset('');
+    }
   };
 
   useEffect(() => {
