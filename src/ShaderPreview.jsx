@@ -41,7 +41,7 @@ const ShaderPreview = forwardRef(({ shaderType, presetName, imageUrl, width, hei
   const isFlutedGlass = shaderType === 'fluted-glass';
   const shaderScale = (isWaterOverlay || isFlutedGlass) ? 1.25 : 1;
 
-  // For the default fluted glass, scale up the glass pattern (rib width) 1.5x (from 0.5 to 0.75)
+  // For the default fluted glass, scale up the glass pattern (rib width) 3.0x (from 0.5 to 1.5)
   const isDefaultFlutedGlass = shaderType === 'fluted-glass' && (presetName === 'Default' || !presetName);
 
   // Visual scaling logic (matches GradientCanvas)
@@ -75,7 +75,7 @@ const ShaderPreview = forwardRef(({ shaderType, presetName, imageUrl, width, hei
             {...(preset?.params || {})}
             fit="cover"
             scale={shaderScale}
-            {...(isDefaultFlutedGlass ? { size: 0.75 } : {})}
+            {...(isDefaultFlutedGlass ? { size: 1.5 } : {})}
             style={{ width: '100%', height: '100%', display: 'block' }}
           />
         </div>
