@@ -11,7 +11,7 @@ import {
 const SHADER_COMPONENTS = {
   'paper-texture': { Component: PaperTexture, presets: paperTexturePresets.filter(p => p.name !== 'Cardboard' && p.name !== 'Details') },
   'fluted-glass': { Component: FlutedGlass, presets: flutedGlassPresets.filter(p => p.name !== 'Abstract' && p.name !== 'Folds') },
-  'water': { Component: Water, presets: waterPresets },
+  'water': { Component: Water, presets: waterPresets.filter(p => p.name !== 'Slow-mo' && p.name !== 'Abstract') },
   'image-dithering': { Component: ImageDithering, presets: imageDitheringPresets.filter(p => p.name !== 'Default' && p.name !== 'Noise' && p.name !== 'Retro') },
   'halftone-dots': { Component: HalftoneDots, presets: halftoneDotsPresets.filter(p => p.name !== 'Default' && p.name !== 'LED screen' && p.name !== 'Round and square') },
   'halftone-cmyk': { Component: HalftoneCmyk, presets: halftoneCmykPresets.filter(p => p.name !== 'Newspaper' && p.name !== 'Drops') }
@@ -36,8 +36,8 @@ const ShaderPreview = forwardRef(({ shaderType, presetName, imageUrl, width, hei
   const { Component, presets } = shaderConfig;
   const preset = presets.find(p => p.name === presetName) || presets[0];
 
-  // For all water presets besides slow-mo, and all fluted glass presets, scale up/zoom in to hide distortion edges
-  const isWaterOverlay = shaderType === 'water' && presetName !== 'Slow-mo';
+  // For all water presets and fluted glass presets, scale up/zoom in to hide distortion edges
+  const isWaterOverlay = shaderType === 'water';
   const isFlutedGlass = shaderType === 'fluted-glass';
   const shaderScale = (isWaterOverlay || isFlutedGlass) ? 1.25 : 1;
 
