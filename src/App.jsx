@@ -39,6 +39,56 @@ const SHADER_PRESETS = {
   'halftone-cmyk': halftoneCmykPresets.filter(p => p.name !== 'Newspaper' && p.name !== 'Drops')
 };
 
+const hslToHex = (h, s, l) => {
+  l /= 100;
+  const a = s * Math.min(l, 1 - l) / 100;
+  const f = n => {
+    const k = (n + h / 30) % 12;
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+};
+
+const generateHarmonicPalette = (count) => {
+  const baseHue = Math.floor(Math.random() * 360);
+  const scheme = Math.floor(Math.random() * 4); // 0: Analogous, 1: Triadic, 2: Split Complementary, 3: Monochromatic
+  
+  const newColors = [];
+  for (let i = 0; i < count; i++) {
+    let h, s, l;
+    
+    s = 60 + Math.random() * 40; // 60-100% saturation for striking colors
+    l = 40 + Math.random() * 40; // 40-80% lightness
+    
+    // Introduce an occasional dark or very light accent color for contrast
+    if (i === count - 1 && Math.random() > 0.5) {
+       l = Math.random() > 0.5 ? 15 + Math.random() * 10 : 85 + Math.random() * 10;
+       s = 80 + Math.random() * 20;
+    }
+
+    if (scheme === 0) {
+      h = (baseHue + (i * 30) + (Math.random() * 10 - 5)) % 360;
+    } else if (scheme === 1) {
+      h = (baseHue + (i * 120)) % 360;
+      if (i >= 3) h = (h + 30) % 360; 
+      h = (h + (Math.random() * 10 - 5)) % 360;
+    } else if (scheme === 2) {
+      if (i === 0) h = baseHue;
+      else if (i % 2 === 1) h = (baseHue + 150) % 360;
+      else h = (baseHue + 210) % 360;
+      h = (h + (Math.random() * 20 - 10)) % 360;
+    } else {
+      h = (baseHue + (Math.random() * 20 - 10)) % 360;
+      s = 50 + Math.random() * 50;
+      l = 20 + (i * (60 / Math.max(1, count - 1))) + (Math.random() * 10 - 5);
+    }
+    
+    if (h < 0) h += 360;
+    newColors.push(hslToHex(h, s, l));
+  }
+  return newColors;
+};
 function App() {
   const [colors, setColors] = useState([...DEFAULT_COLORS]);
   const [activeRatio, setActiveRatio] = useState(RATIOS[0]);
@@ -86,9 +136,7 @@ function App() {
 
   const randomize = () => {
     setSeed(Math.random());
-    setColors(prevColors => prevColors.map(() => 
-      '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')
-    ));
+    setColors(prevColors => generateHarmonicPalette(prevColors.length));
 
     // Randomize blur strength between 45 and 100, and ensure blur is enabled
     setBlurStrength(Math.floor(Math.random() * 56) + 45);
