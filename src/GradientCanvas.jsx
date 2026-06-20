@@ -106,18 +106,9 @@ const GradientCanvas = forwardRef(({ colors, width, height, seed, glassIntensity
     // 2: Monumental Arches / Portals (like image 3)
     const theme = Math.floor(random() * 3);
 
-    // Stable Fisher-Yates shuffle using our deterministic pseudo-random generator
-    const shuffledColors = [...colors];
-    for (let i = shuffledColors.length - 1; i > 0; i--) {
-      const j = Math.floor(random() * (i + 1));
-      const temp = shuffledColors[i];
-      shuffledColors[i] = shuffledColors[j];
-      shuffledColors[j] = temp;
-    }
-
     if (theme === 0) {
       // THEME 0: SWEEPING WAVES & DUNES
-      shuffledColors.forEach((color, i) => {
+      colors.forEach((color, i) => {
         ctx.globalCompositeOperation = getBlendMode(i);
         ctx.globalAlpha = 0.8 + random() * 0.2;
         ctx.fillStyle = color;
@@ -146,12 +137,12 @@ const GradientCanvas = forwardRef(({ colors, width, height, seed, glassIntensity
     } else if (theme === 1) {
       // THEME 1: SHARP SLASHES / CLAWS
       // Base background
-      ctx.fillStyle = shuffledColors[0] || '#000';
+      ctx.fillStyle = colors[0] || '#000';
       ctx.fillRect(0, 0, width, height);
 
       // Draw massive swooping slashes ending in sharp points
-      for (let i = 1; i < shuffledColors.length; i++) {
-        const color = shuffledColors[i];
+      for (let i = 1; i < colors.length; i++) {
+        const color = colors[i];
         const numSlashes = 1 + Math.floor(random() * 3);
         
         ctx.fillStyle = color;
@@ -197,7 +188,7 @@ const GradientCanvas = forwardRef(({ colors, width, height, seed, glassIntensity
       }
     } else {
       // THEME 2: MONUMENTAL ARCHES / PORTALS
-      ctx.fillStyle = shuffledColors[0] || '#000';
+      ctx.fillStyle = colors[0] || '#000';
       ctx.fillRect(0, 0, width, height);
 
       // Draw concentric arches
@@ -207,9 +198,9 @@ const GradientCanvas = forwardRef(({ colors, width, height, seed, glassIntensity
       // Usually ground them at the bottom
       const archY = height * 1.1;
 
-      for (let i = 1; i < shuffledColors.length; i++) {
+      for (let i = 1; i < colors.length; i++) {
         ctx.globalCompositeOperation = getBlendMode(i);
-        ctx.fillStyle = shuffledColors[i];
+        ctx.fillStyle = colors[i];
         
         ctx.beginPath();
         const centerX = width * (0.3 + random() * 0.4);
@@ -231,9 +222,9 @@ const GradientCanvas = forwardRef(({ colors, width, height, seed, glassIntensity
       }
       
       // Maybe one rogue blade cutting through
-      if (random() > 0.5 && shuffledColors.length > 2) {
+      if (random() > 0.5 && colors.length > 2) {
         ctx.globalCompositeOperation = getBlendMode(99);
-        ctx.fillStyle = shuffledColors[2];
+        ctx.fillStyle = colors[2];
         ctx.beginPath();
         ctx.moveTo(-width * 0.2, height * 0.5);
         ctx.quadraticCurveTo(width * 0.5, -height * 0.2, width * 1.2, height * 0.8);

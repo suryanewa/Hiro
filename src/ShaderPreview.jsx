@@ -68,6 +68,7 @@ const ShaderPreview = forwardRef(({ shaderType, presetName, imageUrl, width, hei
           }}
         >
           <Component
+            key={imageUrl}
             ref={shaderElementRef}
             image={imageUrl}
             width={width}
