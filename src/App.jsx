@@ -275,7 +275,7 @@ function App() {
 
           <button className="btn-secondary" onClick={randomize}>
             <RefreshCw size={18} />
-            Randomize Composition
+            Randomize
           </button>
           
           <button className="btn-primary" onClick={handleExport}>
