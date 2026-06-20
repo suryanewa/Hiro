@@ -150,7 +150,14 @@ function App() {
         </div>
 
         <div className="control-group">
-          <label className="control-label">Brand Colors</label>
+          <div className="control-header">
+            <label className="control-label">Brand Colors</label>
+            {colors.length < 4 && (
+              <button onClick={addColor} className="btn-icon-add" title="Add Color">
+                <Plus size={16} />
+              </button>
+            )}
+          </div>
           <div className="color-list">
             {colors.map((c, i) => (
               <div key={i} className="color-item">
@@ -177,11 +184,6 @@ function App() {
                 )}
               </div>
             ))}
-            {colors.length < 4 && (
-              <button onClick={addColor} className="btn-add">
-                <Plus size={16} /> Add Color
-              </button>
-            )}
           </div>
         </div>
 

@@ -111,6 +111,33 @@ body {
   letter-spacing: 0.05em;
 }
 
+.control-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.control-header .control-label {
+  margin-bottom: 0;
+}
+
+.btn-icon-add {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s;
+}
+.btn-icon-add:hover {
+  color: var(--text-main);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
 /* Color Pickers */
 .color-list {
   display: flex;
