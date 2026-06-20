@@ -54,11 +54,11 @@ const generateHarmonicPalette = (count, vibrancy = 'vibrant') => {
     let h, s, l;
     
     if (vibrancy === 'subtle') {
-      s = 15 + Math.random() * 20; // 15-35%
-      l = 75 + Math.random() * 15; // 75-90%
+      s = 10 + Math.random() * 20; // 10-30% (desaturated/muted)
+      l = 25 + Math.random() * 55; // 25-80% (broad lightness range: light to dark)
     } else if (vibrancy === 'normal') {
       s = 45 + Math.random() * 25; // 45-70%
-      l = 50 + Math.random() * 20; // 50-70%
+      l = 40 + Math.random() * 30; // 40-70%
     } else {
       // vibrant
       s = 85 + Math.random() * 15; // 85-100%
@@ -68,7 +68,8 @@ const generateHarmonicPalette = (count, vibrancy = 'vibrant') => {
     // Introduce an occasional dark or very light accent color for contrast
     if (i === count - 1 && Math.random() > 0.5) {
        if (vibrancy === 'subtle') {
-         l = 85 + Math.random() * 10;
+         l = Math.random() > 0.5 ? 15 + Math.random() * 15 : 75 + Math.random() * 15;
+         s = 10 + Math.random() * 15;
        } else if (vibrancy === 'normal') {
          l = Math.random() > 0.5 ? 20 + Math.random() * 10 : 80 + Math.random() * 10;
          s = 50 + Math.random() * 20;
@@ -92,14 +93,14 @@ const generateHarmonicPalette = (count, vibrancy = 'vibrant') => {
     } else {
       h = (baseHue + (Math.random() * 20 - 10)) % 360;
       if (vibrancy === 'subtle') {
-        s = Math.max(10, s - (i * 3));
-        l = Math.min(95, l - (i * 3));
+        s = Math.max(8, s - (i * 2));
+        l = l > 50 ? Math.max(30, l - (i * 6)) : Math.min(80, l + (i * 6));
       } else if (vibrancy === 'normal') {
-        s = Math.max(25, s - (i * 5));
-        l = Math.max(30, Math.min(85, l + (i * 8) - 12));
+        s = Math.max(25, s - (i * 4));
+        l = l > 50 ? Math.max(25, l - (i * 8)) : Math.min(85, l + (i * 8));
       } else {
-        s = Math.max(50, s - (i * 5));
-        l = Math.max(15, Math.min(85, l + (i * 12) - 18));
+        s = Math.max(45, s - (i * 4));
+        l = l > 50 ? Math.max(20, l - (i * 10)) : Math.min(90, l + (i * 10));
       }
     }
     
