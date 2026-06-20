@@ -171,17 +171,21 @@ body {
   cursor: pointer;
   padding: 0;
   background: transparent;
+  overflow: hidden;
 }
 .color-picker::-webkit-color-swatch-wrapper {
   padding: 0;
+  border-radius: 50%;
 }
 .color-picker::-webkit-color-swatch {
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: 50%;
+  box-sizing: border-box;
 }
 .color-picker::-moz-color-swatch {
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: 50%;
+  box-sizing: border-box;
 }
 
 .color-hex {
