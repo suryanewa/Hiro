@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Download, RefreshCw, Plus, Trash2, Monitor, Smartphone, Square, Layout, Eye, EyeOff } from 'lucide-react';
+import { Download, RefreshCw, Plus, Trash2, Monitor, Smartphone, Square, Layout } from 'lucide-react';
 import GradientCanvas from './GradientCanvas';
 import ShaderPreview from './ShaderPreview';
 import { 
@@ -272,17 +272,7 @@ function App() {
         </div>
 
         <div className="control-group" style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <button className="btn-secondary" onClick={() => {
-            const nextBlurred = !isBlurred;
-            setIsBlurred(nextBlurred);
-            if (nextBlurred && blurStrength === 0) {
-              setBlurStrength(100);
-            }
-          }}>
-            {isBlurred && blurStrength > 0 ? <EyeOff size={18} /> : <Eye size={18} />}
-            {isBlurred && blurStrength > 0 ? "Disable Blur" : "Enable Blur"}
-          </button>
-          
+
           <button className="btn-secondary" onClick={randomize}>
             <RefreshCw size={18} />
             Randomize Composition
