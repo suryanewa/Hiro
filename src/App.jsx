@@ -45,7 +45,7 @@ const rgbToHex = (r, g, b) => {
   return `#${f(r)}${f(g)}${f(b)}`;
 };
 
-const generateHarmonicPalette = (count) => {
+const generateHarmonicPalette = (count, vibrancy = 'vibrant') => {
   const baseHue = Math.floor(Math.random() * 360);
   const scheme = Math.floor(Math.random() * 4); // 0: Analogous, 1: Triadic, 2: Split Complementary, 3: Monochromatic
   
@@ -53,13 +53,22 @@ const generateHarmonicPalette = (count) => {
   for (let i = 0; i < count; i++) {
     let h, s, l;
     
-    s = 60 + Math.random() * 40; // 60-100% saturation for striking colors
-    l = 40 + Math.random() * 40; // 40-80% lightness
+    if (vibrancy === 'subtle') {
+      s = 20 + Math.random() * 30; // 20-50%
+      l = 60 + Math.random() * 30; // 60-90%
+    } else if (vibrancy === 'normal') {
+      s = 40 + Math.random() * 40; // 40-80%
+      l = 40 + Math.random() * 40; // 40-80%
+    } else {
+      // vibrant
+      s = 70 + Math.random() * 30; // 70-100%
+      l = 40 + Math.random() * 30; // 40-70%
+    }
     
     // Introduce an occasional dark or very light accent color for contrast
     if (i === count - 1 && Math.random() > 0.5) {
        l = Math.random() > 0.5 ? 15 + Math.random() * 10 : 85 + Math.random() * 10;
-       s = 80 + Math.random() * 20;
+       s = vibrancy === 'subtle' ? s : 80 + Math.random() * 20;
     }
 
     if (scheme === 0) {
@@ -92,6 +101,7 @@ function App() {
   const [isBlurred, setIsBlurred] = useState(true);
   const [blurStrength, setBlurStrength] = useState(100);
   const [blendMode, setBlendMode] = useState('dynamic');
+  const [vibrancy, setVibrancy] = useState('vibrant');
   const [activeShader, setActiveShader] = useState('none');
   const [activePreset, setActivePreset] = useState('');
   const [gradientDataUrl, setGradientDataUrl] = useState(null);
@@ -132,7 +142,7 @@ function App() {
 
   const randomize = () => {
     setSeed(Math.random());
-    setColors(prevColors => generateHarmonicPalette(prevColors.length));
+    setColors(prevColors => generateHarmonicPalette(prevColors.length, vibrancy));
 
     // Randomize blur strength between 45 and 100, and ensure blur is enabled
     setBlurStrength(Math.floor(Math.random() * 56) + 45);
@@ -253,6 +263,19 @@ function App() {
             }}
             className="range-input"
           />
+        </div>
+
+        <div className="control-group">
+          <label className="control-label">Vibrancy</label>
+          <select 
+            value={vibrancy} 
+            onChange={(e) => setVibrancy(e.target.value)}
+            className="select-input"
+          >
+            <option value="subtle">Subtle</option>
+            <option value="normal">Normal</option>
+            <option value="vibrant">Vibrant</option>
+          </select>
         </div>
 
         <div className="control-group">
