@@ -36,10 +36,11 @@ const ShaderPreview = forwardRef(({ shaderType, presetName, imageUrl, width, hei
   const { Component, presets } = shaderConfig;
   const preset = presets.find(p => p.name === presetName) || presets[0];
 
-  // For all water presets and fluted glass presets, scale up/zoom in to hide distortion edges
+  // For water, fluted glass, and paper texture presets, scale up/zoom in to hide distortion edges
   const isWaterOverlay = shaderType === 'water';
   const isFlutedGlass = shaderType === 'fluted-glass';
-  const shaderScale = (isWaterOverlay || isFlutedGlass) ? 1.25 : 1;
+  const isPaperTexture = shaderType === 'paper-texture';
+  const shaderScale = (isWaterOverlay || isFlutedGlass) ? 1.25 : (isPaperTexture ? 1.15 : 1);
 
   // For the default fluted glass, scale up the glass pattern (rib width) by setting size to 0.92 (default is 0.5)
   const isDefaultFlutedGlass = shaderType === 'fluted-glass' && (presetName === 'Default' || !presetName);
@@ -77,7 +78,12 @@ const ShaderPreview = forwardRef(({ shaderType, presetName, imageUrl, width, hei
             fit="cover"
             scale={shaderScale}
             {...(isDefaultFlutedGlass ? { size: 0.92 } : {})}
-            style={{ width: '100%', height: '100%', display: 'block' }}
+            style={{ 
+              width: '100%', 
+              height: '100%', 
+              display: 'block',
+              filter: shaderType === 'paper-texture' ? 'contrast(1.25) saturate(1.25) brightness(1.05)' : 'none'
+            }}
           />
         </div>
       ) : (
