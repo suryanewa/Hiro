@@ -39,7 +39,10 @@ const ShaderPreview = forwardRef(({ shaderType, presetName, imageUrl, width, hei
   // For all water presets besides slow-mo, and all fluted glass presets, scale up/zoom in to hide distortion edges
   const isWaterOverlay = shaderType === 'water' && presetName !== 'Slow-mo';
   const isFlutedGlass = shaderType === 'fluted-glass';
-  const shaderScale = (isWaterOverlay || isFlutedGlass) ? 1.25 : 1;
+  let shaderScale = 1;
+  if (isWaterOverlay || isFlutedGlass) {
+    shaderScale = (shaderType === 'fluted-glass' && presetName === 'Folds') ? 1.5625 : 1.25;
+  }
 
   // Visual scaling logic (matches GradientCanvas)
   const renderScale = Math.min(1, 800 / Math.max(width, height));
