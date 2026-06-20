@@ -17,7 +17,7 @@ const SHADER_COMPONENTS = {
   'halftone-cmyk': { Component: HalftoneCmyk, presets: halftoneCmykPresets.filter(p => p.name !== 'Newspaper' && p.name !== 'Drops') }
 };
 
-const ShaderPreview = forwardRef(({ shaderType, presetName, imageUrl, width, height }, ref) => {
+const ShaderPreview = forwardRef(({ shaderType, presetName, imageUrl, width, height, zoom = 1 }, ref) => {
   const shaderElementRef = useRef(null);
 
   // Expose export function to parent
@@ -45,7 +45,7 @@ const ShaderPreview = forwardRef(({ shaderType, presetName, imageUrl, width, hei
   const isDefaultFlutedGlass = shaderType === 'fluted-glass' && (presetName === 'Default' || !presetName);
 
   // Visual scaling logic (matches GradientCanvas)
-  const renderScale = Math.min(1, 800 / Math.max(width, height));
+  const renderScale = Math.min(1, 800 / Math.max(width, height)) * 1.75 * zoom;
 
   return (
     <div 

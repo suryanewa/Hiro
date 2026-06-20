@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Download, RefreshCw, Plus, Trash2, Monitor, Smartphone, Square, Layout } from 'lucide-react';
+import { Download, RefreshCw, Plus, Trash2, Monitor, Smartphone, Square, Layout, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import GradientCanvas from './GradientCanvas';
 import ShaderPreview from './ShaderPreview';
 import { 
@@ -22,8 +22,8 @@ const RATIOS = [
 ];
 
 const BLEND_MODES = [
-  { label: 'Dynamic (Mix)', value: 'dynamic' },
   { label: 'Normal', value: 'source-over' },
+  { label: 'Dynamic (Mix)', value: 'dynamic' },
   { label: 'Screen (Glowing)', value: 'screen' },
   { label: 'Multiply (Deep)', value: 'multiply' },
   { label: 'Overlay (Contrast)', value: 'overlay' },
@@ -141,14 +141,19 @@ function App() {
   const [seed, setSeed] = useState(Math.random());
   const [isBlurred, setIsBlurred] = useState(true);
   const [blurStrength, setBlurStrength] = useState(100);
-  const [blendMode, setBlendMode] = useState('dynamic');
+  const [blendMode, setBlendMode] = useState('source-over');
   const [vibrancy, setVibrancy] = useState('vibrant');
   const [activeShader, setActiveShader] = useState('none');
   const [activePreset, setActivePreset] = useState('');
   const [gradientDataUrl, setGradientDataUrl] = useState(null);
+  const [zoom, setZoom] = useState(1);
   
   const canvasRef = useRef(null);
   const shaderRef = useRef(null);
+
+  useEffect(() => {
+    setZoom(1);
+  }, [activeRatio]);
 
   const handleShaderChange = (shaderType) => {
     setActiveShader(shaderType);
@@ -188,7 +193,8 @@ function App() {
     const randomVibrancy = vibrancyOptions[Math.floor(Math.random() * vibrancyOptions.length)];
     setVibrancy(randomVibrancy);
 
-    setColors(prevColors => generateHarmonicPalette(prevColors.length, randomVibrancy));
+    const randomCount = Math.floor(Math.random() * 5) + 2; // Between 2 and 6 colors
+    setColors(generateHarmonicPalette(randomCount, randomVibrancy));
 
     // Randomize blur strength between 45 and 100, and ensure blur is enabled
     setBlurStrength(Math.floor(Math.random() * 56) + 45);
@@ -409,31 +415,70 @@ function App() {
 
       {/* Main Canvas Area */}
       <div className="main-content">
-        <div style={{ display: activeShader === 'none' ? 'block' : 'none' }}>
-          <GradientCanvas 
-            ref={canvasRef}
-            colors={colors}
-            width={activeRatio.width}
-            height={activeRatio.height}
-            seed={seed}
-            glassIntensity={0}
-            isBlurred={isBlurred}
-            blurStrength={blurStrength}
-            blendMode={blendMode}
-            onRender={setGradientDataUrl}
-          />
+        <div className="preview-scroll-container">
+          <div style={{ display: activeShader === 'none' ? 'block' : 'none' }}>
+            <GradientCanvas 
+              ref={canvasRef}
+              colors={colors}
+              width={activeRatio.width}
+              height={activeRatio.height}
+              seed={seed}
+              glassIntensity={0}
+              isBlurred={isBlurred}
+              blurStrength={blurStrength}
+              blendMode={blendMode}
+              onRender={setGradientDataUrl}
+              zoom={zoom}
+            />
+          </div>
+
+          {activeShader !== 'none' && (
+            <ShaderPreview 
+              ref={shaderRef}
+              shaderType={activeShader}
+              presetName={activePreset}
+              imageUrl={gradientDataUrl}
+              width={activeRatio.width}
+              height={activeRatio.height}
+              zoom={zoom}
+            />
+          )}
         </div>
 
-        {activeShader !== 'none' && (
-          <ShaderPreview 
-            ref={shaderRef}
-            shaderType={activeShader}
-            presetName={activePreset}
-            imageUrl={gradientDataUrl}
-            width={activeRatio.width}
-            height={activeRatio.height}
-          />
-        )}
+        {/* Zoom Controls */}
+        <div className="zoom-controls">
+          <button 
+            className="zoom-btn" 
+            onClick={() => setZoom(prev => Math.max(0.25, prev - 0.25))}
+            disabled={zoom <= 0.25}
+            title="Zoom Out"
+          >
+            <ZoomOut size={16} />
+          </button>
+          <span 
+            className="zoom-text" 
+            onClick={() => setZoom(1)}
+            title="Reset Zoom (Fit)"
+          >
+            {Math.round(zoom * 100)}%
+          </span>
+          <button 
+            className="zoom-btn" 
+            onClick={() => setZoom(prev => Math.min(4.0, prev + 0.25))}
+            disabled={zoom >= 4.0}
+            title="Zoom In"
+          >
+            <ZoomIn size={16} />
+          </button>
+          <button 
+            className="zoom-btn" 
+            onClick={() => setZoom(1)}
+            disabled={zoom === 1}
+            title="Fit to Screen"
+          >
+            <Maximize size={16} />
+          </button>
+        </div>
       </div>
     </div>
   );

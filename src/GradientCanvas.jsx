@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 
-const GradientCanvas = forwardRef(({ colors, width, height, seed, glassIntensity = 0.1, isBlurred = true, blurStrength = 100, blendMode = 'dynamic', onRender }, ref) => {
+const GradientCanvas = forwardRef(({ colors, width, height, seed, glassIntensity = 0.1, isBlurred = true, blurStrength = 100, blendMode = 'dynamic', onRender, zoom = 1 }, ref) => {
   const canvasRef = useRef(null);
 
   // Expose export function to parent
@@ -109,30 +109,36 @@ const GradientCanvas = forwardRef(({ colors, width, height, seed, glassIntensity
     if (theme === 0) {
       // THEME 0: SWEEPING WAVES & DUNES
       colors.forEach((color, i) => {
-        ctx.globalCompositeOperation = getBlendMode(i);
-        ctx.globalAlpha = 0.8 + random() * 0.2;
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        
-        // Start from bottom or top randomly
-        const isBottom = random() > 0.5;
-        const baseY = isBottom ? height * 1.2 : -height * 0.2;
-        
-        ctx.moveTo(-width * 0.2, baseY);
-        
-        // Sweep across with huge bezier curves
-        const cp1x = width * (0.2 + random() * 0.6);
-        const cp1y = (random() * 1.2 - 0.1) * height;
-        const cp2x = width * (0.4 + random() * 0.6);
-        const cp2y = (random() * 1.2 - 0.1) * height;
-        const endY = (random() * 1.2 - 0.1) * height;
-        
-        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, width * 1.2, endY);
-        
-        // Close the shape
-        ctx.lineTo(width * 1.2, baseY);
-        ctx.lineTo(-width * 0.2, baseY);
-        ctx.fill();
+        const dominance = (colors.length - i) / colors.length;
+        const wavesCount = Math.max(1, Math.round(dominance * 3)); // More waves for dominant colors
+
+        for (let w = 0; w < wavesCount; w++) {
+          ctx.globalCompositeOperation = getBlendMode(i * 10 + w);
+          ctx.globalAlpha = 1.0;
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          
+          // Start from bottom or top randomly
+          const isBottom = random() > 0.5;
+          const baseY = isBottom ? height * 1.2 : -height * 0.2;
+          
+          ctx.moveTo(-width * 0.2, baseY);
+          
+          // Reach is proportional to dominance
+          const reach = height * (0.4 + 0.8 * dominance);
+          const cp1x = width * (0.2 + random() * 0.6);
+          const cp1y = isBottom ? height * 1.2 - reach * (0.3 + random() * 0.7) : -height * 0.2 + reach * (0.3 + random() * 0.7);
+          const cp2x = width * (0.4 + random() * 0.6);
+          const cp2y = isBottom ? height * 1.2 - reach * (0.3 + random() * 0.7) : -height * 0.2 + reach * (0.3 + random() * 0.7);
+          const endY = isBottom ? height * 1.2 - reach * (0.3 + random() * 0.7) : -height * 0.2 + reach * (0.3 + random() * 0.7);
+          
+          ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, width * 1.2, endY);
+          
+          // Close the shape
+          ctx.lineTo(width * 1.2, baseY);
+          ctx.lineTo(-width * 0.2, baseY);
+          ctx.fill();
+        }
       });
     } else if (theme === 1) {
       // THEME 1: SHARP SLASHES / CLAWS
@@ -143,10 +149,11 @@ const GradientCanvas = forwardRef(({ colors, width, height, seed, glassIntensity
       // Draw massive swooping slashes ending in sharp points
       for (let i = 1; i < colors.length; i++) {
         const color = colors[i];
-        const numSlashes = 1 + Math.floor(random() * 3);
+        const dominance = (colors.length - i) / (colors.length - 1 || 1);
+        const numSlashes = Math.max(1, Math.round(dominance * 3)); // More slashes for dominant colors
         
         ctx.fillStyle = color;
-        ctx.globalAlpha = 0.85 + random() * 0.15;
+        ctx.globalAlpha = 1.0;
 
         // Determine a focal corner for the slashes to originate from
         const originX = random() > 0.5 ? -width * 0.3 : width * 1.3;
@@ -162,9 +169,12 @@ const GradientCanvas = forwardRef(({ colors, width, height, seed, glassIntensity
           
           ctx.moveTo(startX, startY);
 
-          // The sharp tip, reaching across the canvas
-          const tipX = width * (0.2 + random() * 0.6);
-          const tipY = height * (0.2 + random() * 0.6);
+          // Tip reach is scaled by dominance
+          const reach = 0.3 + 0.7 * dominance;
+          const targetTipX = width * (0.2 + random() * 0.6);
+          const targetTipY = height * (0.2 + random() * 0.6);
+          const tipX = startX + (targetTipX - startX) * reach;
+          const tipY = startY + (targetTipY - startY) * reach;
 
           // Control points determine the curve of the blade
           const cpOffset = baseDim * 0.5;
@@ -175,7 +185,8 @@ const GradientCanvas = forwardRef(({ colors, width, height, seed, glassIntensity
           ctx.quadraticCurveTo(cp1x, cp1y, tipX, tipY);
           
           // Bottom edge of the blade (returns to an offset origin to make it thick at the base)
-          const baseWidth = baseDim * (0.2 + random() * 0.4);
+          // Thickness/base width scaled by dominance
+          const baseWidth = baseDim * (0.15 + random() * 0.25) * dominance;
           const endX = startX + (random() - 0.5) * baseWidth;
           const endY = startY + (random() - 0.5) * baseWidth;
           
@@ -199,35 +210,50 @@ const GradientCanvas = forwardRef(({ colors, width, height, seed, glassIntensity
       const archY = height * 1.1;
 
       for (let i = 1; i < colors.length; i++) {
-        ctx.globalCompositeOperation = getBlendMode(i);
-        ctx.fillStyle = colors[i];
-        
-        ctx.beginPath();
-        const centerX = width * (0.3 + random() * 0.4);
-        
-        ctx.moveTo(centerX - currentW/2, archY);
-        ctx.lineTo(centerX - currentW/2, archY - currentH * 0.5);
-        // The dome
-        ctx.bezierCurveTo(
-          centerX - currentW/2, archY - currentH, 
-          centerX + currentW/2, archY - currentH, 
-          centerX + currentW/2, archY - currentH * 0.5
-        );
-        ctx.lineTo(centerX + currentW/2, archY);
-        ctx.fill();
+        const color = colors[i];
+        const dominance = (colors.length - i) / (colors.length - 1 || 1);
+        const archesCount = Math.max(1, Math.round(dominance * 2)); // More nested arches for dominant colors
 
-        // Shrink for the next inner arch
-        currentW *= (0.4 + random() * 0.4);
-        currentH *= (0.5 + random() * 0.4);
+        for (let a = 0; a < archesCount; a++) {
+          ctx.globalCompositeOperation = getBlendMode(i * 10 + a);
+          ctx.fillStyle = color;
+          
+          ctx.beginPath();
+          // Slightly offset center X for nested arches, spread wider for dominant colors
+          const centerSpread = 0.3 * dominance;
+          const centerX = width * (0.5 + (random() - 0.5) * centerSpread);
+          
+          ctx.moveTo(centerX - currentW/2, archY);
+          ctx.lineTo(centerX - currentW/2, archY - currentH * 0.5);
+          // The dome
+          ctx.bezierCurveTo(
+            centerX - currentW/2, archY - currentH, 
+            centerX + currentW/2, archY - currentH, 
+            centerX + currentW/2, archY - currentH * 0.5
+          );
+          ctx.lineTo(centerX + currentW/2, archY);
+          ctx.fill();
+
+          // Shrink for the next inner arch
+          currentW *= (0.45 + random() * 0.25);
+          currentH *= (0.55 + random() * 0.25);
+        }
       }
       
       // Maybe one rogue blade cutting through
       if (random() > 0.5 && colors.length > 2) {
+        const rogueColorIndex = 1 + Math.floor(random() * (colors.length - 1));
+        const rogueDominance = (colors.length - rogueColorIndex) / (colors.length - 1 || 1);
+        
         ctx.globalCompositeOperation = getBlendMode(99);
-        ctx.fillStyle = colors[2];
+        ctx.fillStyle = colors[rogueColorIndex] || colors[colors.length - 1];
+        
         ctx.beginPath();
-        ctx.moveTo(-width * 0.2, height * 0.5);
-        ctx.quadraticCurveTo(width * 0.5, -height * 0.2, width * 1.2, height * 0.8);
+        // Start position and height reflect the rogue color's dominance
+        const startY = height * (0.4 + 0.3 * (1 - rogueDominance));
+        const endY = height * (0.6 + 0.3 * rogueDominance);
+        ctx.moveTo(-width * 0.2, startY);
+        ctx.quadraticCurveTo(width * 0.5, -height * 0.1, width * 1.2, endY);
         ctx.lineTo(width * 1.2, height * 1.2);
         ctx.lineTo(-width * 0.2, height * 1.2);
         ctx.fill();
@@ -248,7 +274,7 @@ const GradientCanvas = forwardRef(({ colors, width, height, seed, glassIntensity
   }, [colors, width, height, seed, glassIntensity, isBlurred, blurStrength, blendMode, onRender]);
 
   // Visual scaling logic so it fits the screen without changing actual export resolution
-  const renderScale = Math.min(1, 800 / Math.max(width, height));
+  const renderScale = Math.min(1, 800 / Math.max(width, height)) * 1.75 * zoom;
 
   return (
     <div 
