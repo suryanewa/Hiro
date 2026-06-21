@@ -262,9 +262,15 @@ const GradientCanvas = forwardRef(({ colors, width, height, seed, glassIntensity
     
     ctx.globalAlpha = 1.0;
 
-    // 2.5 Draw Edge Ring (if enabled)
+    // 3. Reset filter for overlay
+    ctx.filter = 'none';
+
+    // Reset composite operation
+    ctx.globalCompositeOperation = 'source-over';
+
+    // 4. Draw Edge Ring (if enabled) as the top layer (unblurred) with plus-lighter blend mode
     if (showRing) {
-      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalCompositeOperation = 'plus-lighter';
       ctx.strokeStyle = colors[0] || '#000000';
       
       // Calculate a responsive line width (e.g. 12% of the canvas smaller dimension)
@@ -278,13 +284,10 @@ const GradientCanvas = forwardRef(({ colors, width, height, seed, glassIntensity
         width - strokeThickness, 
         height - strokeThickness
       );
+      
+      // Reset composite operation after drawing
+      ctx.globalCompositeOperation = 'source-over';
     }
-
-    // 3. Reset filter for overlay
-    ctx.filter = 'none';
-
-    // Reset composite operation
-    ctx.globalCompositeOperation = 'source-over';
 
     if (onRender) {
       onRender(canvas.toDataURL('image/png'));
