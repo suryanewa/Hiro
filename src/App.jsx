@@ -196,8 +196,8 @@ function App() {
     const randomCount = Math.floor(Math.random() * 5) + 2; // Between 2 and 6 colors
     setColors(generateHarmonicPalette(randomCount, randomVibrancy));
 
-    // Randomize blur strength between 45 and 100, and ensure blur is enabled
-    setBlurStrength(Math.floor(Math.random() * 56) + 45);
+    // Randomize blur strength between 50 and 75, and ensure blur is enabled
+    setBlurStrength(Math.floor(Math.random() * 26) + 50);
     setIsBlurred(true);
 
     const shaderTypes = ['none', 'paper-texture', 'fluted-glass', 'water', 'image-dithering', 'halftone-dots', 'halftone-cmyk'];
@@ -251,7 +251,7 @@ function App() {
               width: 24, height: 24, borderRadius: 6,
               background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)'
             }} />
-            Gradients
+            Hiro
           </h1>
         </div>
 
