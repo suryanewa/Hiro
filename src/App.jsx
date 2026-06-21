@@ -32,6 +32,7 @@ import {
 } from '@paper-design/shaders-react';
 import { rybHsl2rgb } from 'rybitten';
 import { generateRandomColorRamp } from 'fettepalette';
+import { generateColorRampWithCurve } from 'rampensau';
 
 const DEFAULT_COLORS = ['#0f172a', '#3b82f6', '#8b5cf6', '#000000'];
 
@@ -308,11 +309,53 @@ const generateFettePalette = (count, vibrancy = 'vibrant') => {
   });
 };
 
+const generateRampensauPalette = (count, vibrancy = 'vibrant') => {
+  const hStart = Math.random() * 360;
+  // hCycles: how much the hue rotates across the ramp
+  const hCycles = vibrancy === 'subtle' ? (Math.random() * 0.3) - 0.15 :
+                  vibrancy === 'normal' ? (Math.random() * 0.8) - 0.4 :
+                                         (Math.random() * 2) - 1;
+
+  // sRange: [minSat, maxSat] as 0–1 fractions
+  const sRange = vibrancy === 'subtle'
+    ? [0.15 + Math.random() * 0.15, 0.3 + Math.random() * 0.15]
+    : vibrancy === 'normal'
+    ? [0.3 + Math.random() * 0.2, 0.55 + Math.random() * 0.2]
+    : [0.55 + Math.random() * 0.2, 0.85 + Math.random() * 0.15];
+
+  // lRange: [minLight, maxLight] spanning dark→light across the ramp
+  const lRange = vibrancy === 'subtle'
+    ? [0.35 + Math.random() * 0.15, 0.7 + Math.random() * 0.15]
+    : vibrancy === 'normal'
+    ? [0.15 + Math.random() * 0.2, 0.8 + Math.random() * 0.15]
+    : [0.05 + Math.random() * 0.15, 0.9 + Math.random() * 0.08];
+
+  const curveMethods = ['lamé', 'sine', 'power', 'linear'];
+  const curveMethod = curveMethods[Math.floor(Math.random() * curveMethods.length)];
+  const curveAccent = 0.1 + Math.random() * 1.5;
+
+  const ramp = generateColorRampWithCurve({
+    total: count,
+    hStart,
+    hCycles,
+    sRange,
+    lRange,
+    curveMethod,
+    curveAccent,
+  });
+
+  return ramp.map(([h, s, l]) => {
+    const rgb = rybHsl2rgb([h, s, l]);
+    return rgbToHex(rgb[0], rgb[1], rgb[2]);
+  });
+};
+
 const generateRandomPalette = (count, vibrancy = 'vibrant') => {
   const r = Math.random();
-  if (r < 0.34) return generateHarmonicPalette(count, vibrancy);
-  if (r < 0.67) return generateFarbveloPalette(count, vibrancy);
-  return generateFettePalette(count, vibrancy);
+  if (r < 0.25) return generateHarmonicPalette(count, vibrancy);
+  if (r < 0.50) return generateFarbveloPalette(count, vibrancy);
+  if (r < 0.75) return generateFettePalette(count, vibrancy);
+  return generateRampensauPalette(count, vibrancy);
 };
 
 function TakiSlider({ value, min = 0, max = 100, step = 1, onChange }) {
