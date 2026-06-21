@@ -95,8 +95,7 @@ const ShaderPreview = forwardRef(({ shaderType, presetName, imageUrl, width, hei
               foldCount: 1,
               drops: 0,
               fade: 0.4,
-              seed: 0,
-              scale: 0.5
+              seed: 0
             } : {})}
             style={{ 
               width: '100%', 
