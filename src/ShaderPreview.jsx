@@ -78,7 +78,7 @@ const ShaderPreview = forwardRef(({ shaderType, presetName, imageUrl, width, hei
             {...(preset?.params || {})}
             fit="cover"
             scale={shaderScale}
-            {...(isDefaultFlutedGlass ? { size: 0.92, shift: -0.18 } : {})}
+            {...(isDefaultFlutedGlass ? { size: 0.92, shift: -0.18, scale: shaderScale * 1.1 } : {})}
             style={{ 
               width: '100%', 
               height: '100%', 
