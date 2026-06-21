@@ -269,7 +269,7 @@ function AnimatedSelect({ label, value, options, onChange }) {
             display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', 
             color: 'var(--text-muted)', border: 'none', background: 'transparent', 
             cursor: 'pointer', padding: 0, fontFamily: 'inherit',
-            transition: 'color 0.2s'
+            transition: 'color 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
           onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-main)'}
           onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
@@ -280,7 +280,7 @@ function AnimatedSelect({ label, value, options, onChange }) {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.15 }}
+                transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
                 style={{ color: 'inherit' }}
               >
                 {selectedLabel}
@@ -290,7 +290,7 @@ function AnimatedSelect({ label, value, options, onChange }) {
           <ChevronDown
             size={16}
             style={{
-              transition: 'transform 0.2s',
+              transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               transform: open ? 'rotate(180deg)' : 'rotate(0deg)'
             }}
           />
@@ -303,7 +303,7 @@ function AnimatedSelect({ label, value, options, onChange }) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
+            transition={{ duration: 0.2, ease: [0.65, 0, 0.35, 1] }}
             style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}
           >
             {options.map((opt) => (
@@ -316,7 +316,7 @@ function AnimatedSelect({ label, value, options, onChange }) {
                   background: 'transparent', border: 'none', fontFamily: 'inherit',
                   color: value === opt.value ? 'var(--text-main)' : 'var(--text-muted)',
                   fontWeight: value === opt.value ? '500' : '400',
-                  transition: 'color 0.2s'
+                  transition: 'color 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-main)'}
                 onMouseLeave={(e) => e.currentTarget.style.color = value === opt.value ? 'var(--text-main)' : 'var(--text-muted)'}

@@ -32,6 +32,11 @@
   
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  /* Transition Easing Curves */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 * {
@@ -105,7 +110,7 @@ body {
   justify-content: center;
   border-radius: var(--radius-lg);
   box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s var(--ease-standard);
   background: var(--bg-sidebar);
   overflow: hidden;
   border: 1px solid var(--border-color);
@@ -154,10 +159,10 @@ body {
   justify-content: center;
   padding: 4px;
   border-radius: var(--radius-sm);
-  transition: color 0.2s;
+  transition: color 0.2s var(--ease-standard);
 }
 .btn-icon-add svg {
-  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.45s var(--ease-spring);
 }
 .btn-icon-add:hover:not(:disabled) {
   color: var(--text-main);
@@ -187,7 +192,7 @@ body {
   padding: 0 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s var(--ease-standard), box-shadow 0.2s var(--ease-standard);
 }
 
 .color-item:focus-within {
@@ -242,7 +247,7 @@ body {
   justify-content: center;
   padding: 4px;
   border-radius: var(--radius-sm);
-  transition: all 0.2s;
+  transition: all 0.2s var(--ease-standard);
   opacity: 0;
   margin-right: -5px;
 }
@@ -267,7 +272,7 @@ body {
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: all 0.2s var(--ease-standard);
 }
 .btn-add:hover {
   border-color: var(--text-muted);
@@ -299,7 +304,7 @@ body {
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: color 0.2s;
+  transition: color 0.2s var(--ease-standard);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -351,7 +356,7 @@ body {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s var(--ease-standard);
 }
 .btn-primary:hover {
   opacity: 0.9;
@@ -372,7 +377,7 @@ body {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s var(--ease-standard);
 }
 .btn-secondary:hover {
   background-color: var(--bg-panel);
@@ -389,7 +394,7 @@ body {
 .slider-value {
   font-size: 14px;
   color: var(--text-muted);
-  transition: color 150ms ease-out;
+  transition: color 150ms var(--ease-out-expo);
 }
 
 .control-group:has(.taki-slider-control:hover) .slider-value,
@@ -417,7 +422,7 @@ body {
   border-radius: 50%;
   background: var(--bg-main);
   border: 2px solid var(--accent);
-  transition: background 0.15s ease-in-out, transform 0.1s ease;
+  transition: background 0.15s var(--ease-standard), transform 0.1s var(--ease-out-expo);
   box-shadow: 0 0 0 0 transparent;
 }
 
@@ -431,7 +436,7 @@ body {
   border-radius: 50%;
   background: var(--bg-main);
   border: 2px solid var(--accent);
-  transition: background 0.15s ease-in-out, transform 0.1s ease;
+  transition: background 0.15s var(--ease-standard), transform 0.1s var(--ease-out-expo);
   box-shadow: 0 0 0 0 transparent;
 }
 
@@ -453,7 +458,7 @@ body {
   cursor: pointer;
   outline: none;
   text-align: right;
-  transition: color 0.2s;
+  transition: color 0.2s var(--ease-standard);
   background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='oklch(0.708 0 0)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right center;
@@ -490,7 +495,7 @@ body {
   cursor: pointer;
   font-size: 12px;
   font-weight: 500;
-  transition: color 0.2s;
+  transition: color 0.2s var(--ease-standard);
   text-align: center;
 }
 
@@ -564,7 +569,7 @@ body {
   justify-content: center;
   padding: 8px;
   border-radius: var(--radius-sm);
-  transition: all 0.2s;
+  transition: all 0.2s var(--ease-standard);
 }
 
 .zoom-btn:hover:not(:disabled) {
@@ -587,7 +592,7 @@ body {
   user-select: none;
   cursor: pointer;
   border-radius: var(--radius-sm);
-  transition: background-color 0.2s;
+  transition: background-color 0.2s var(--ease-standard);
 }
 
 .zoom-text:hover {
@@ -627,11 +632,11 @@ body {
 }
 
 .color-picker-popover[data-entering] {
-  animation: popover-fade-in 0.15s ease-out;
+  animation: popover-fade-in 0.15s var(--ease-out-expo);
 }
 
 .color-picker-popover[data-exiting] {
-  animation: popover-fade-out 0.1s ease-in;
+  animation: popover-fade-out 0.1s cubic-bezier(0.3, 0, 0.8, 0.15);
 }
 
 @keyframes popover-fade-in {
@@ -726,7 +731,7 @@ body {
   font-family: monospace;
   color: var(--foreground);
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s var(--ease-standard), box-shadow 0.2s var(--ease-standard);
 }
 
 .color-field-input:focus {
@@ -749,7 +754,7 @@ body {
   background: transparent;
   padding: 0;
   display: flex;
-  transition: transform 0.1s ease;
+  transition: transform 0.1s var(--ease-out-expo);
 }
 
 .color-picker-swatchpicker-item:hover {
@@ -802,7 +807,7 @@ body {
   user-select: none;
   transform: scaleY(0.5);
   transform-origin: center;
-  transition: transform 150ms ease-out;
+  transition: transform 150ms var(--ease-out-expo);
 }
 
 .taki-slider-control:hover .taki-slider-track,
@@ -825,7 +830,7 @@ body {
   border-radius: 50%;
   border: 1px solid var(--ring);
   background-color: #fff;
-  transition: color 0.2s, box-shadow 0.2s;
+  transition: color 0.2s var(--ease-standard), box-shadow 0.2s var(--ease-standard);
   user-select: none;
   cursor: pointer;
   outline: none;
