@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { Download, RefreshCw, Plus, Trash2, Monitor, Smartphone, Square, Layout, Check, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -20,7 +20,7 @@ import {
   parseColor
 } from 'react-aria-components';
 import { Slider as SliderPrimitive } from '@base-ui/react/slider';
-import GradientCanvas from './GradientCanvas';
+import GradientCanvas, { RAPID_PREVIEW_MAX_DIMENSION } from './GradientCanvas';
 import ShaderPreview from './ShaderPreview';
 import { exportBackground } from './exportBackground';
 import { 
@@ -441,14 +441,13 @@ const calculatePaletteDistance = (pal1, pal2) => {
   return (distDirection(rgb1, rgb2) + distDirection(rgb2, rgb1)) / 2;
 };
 
-const generateDifferentPalette = (count, vibrancy, previousColors) => {
+const generateDifferentPalette = (count, vibrancy, previousColors, maxAttempts = 6) => {
   if (!previousColors || previousColors.length === 0) return generateRandomPalette(count, vibrancy);
 
   let bestPalette = generateRandomPalette(count, vibrancy);
   let maxDistance = -1;
 
-  // Generate many candidates to guarantee we find a highly distinct palette
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < maxAttempts; i++) {
     const candidate = generateRandomPalette(count, vibrancy);
     const distance = calculatePaletteDistance(candidate, previousColors);
     
@@ -664,6 +663,8 @@ function App() {
   const [gradientDataUrl, setGradientDataUrl] = useState(null);
   const [zoom, setZoom] = useState(1);
   const [showRing, setShowRing] = useState(false);
+  const [isRapidRandomizing, setIsRapidRandomizing] = useState(false);
+  const [renderGeneration, setRenderGeneration] = useState(0);
   
   const canvasRef = useRef(null);
   const shaderRef = useRef(null);
@@ -791,19 +792,80 @@ function App() {
     setColors(prevColors => generateDifferentPalette(randomCount, randomVibrancy, prevColors));
   };
 
-  const randomize = () => {
+  const spaceHoldRef = useRef(null);
+  const isSpaceHeldRef = useRef(false);
+  const spaceDownAtRef = useRef(0);
+  const rapidActivateTimerRef = useRef(null);
+  const wasRapidDuringHoldRef = useRef(false);
+  const rapidEndTimerRef = useRef(null);
+  const pendingGradientUrlRef = useRef(null);
+  const pendingGradientGenerationRef = useRef(0);
+  const gradientFeedRafRef = useRef(null);
+  const isRapidRandomizingRef = useRef(false);
+  const renderGenerationRef = useRef(0);
+  isRapidRandomizingRef.current = isRapidRandomizing;
+  renderGenerationRef.current = renderGeneration;
+
+  const randomize = useCallback((fast = false, { enableRapid = true } = {}) => {
+    if (gradientFeedRafRef.current) {
+      cancelAnimationFrame(gradientFeedRafRef.current);
+      gradientFeedRafRef.current = null;
+    }
+
+    renderGenerationRef.current += 1;
+    setRenderGeneration(renderGenerationRef.current);
+
+    if (enableRapid) {
+      setIsRapidRandomizing(true);
+
+      if (!isSpaceHeldRef.current) {
+        if (rapidEndTimerRef.current) {
+          clearTimeout(rapidEndTimerRef.current);
+        }
+        rapidEndTimerRef.current = window.setTimeout(() => {
+          setIsRapidRandomizing(false);
+          renderGenerationRef.current += 1;
+          setRenderGeneration(renderGenerationRef.current);
+          rapidEndTimerRef.current = null;
+        }, fast ? 150 : 350);
+      }
+    }
+
     setSeed(Math.random());
-    
+    setBlurStrength(Math.floor(Math.random() * 26) + 50);
+    setIsBlurred(true);
+
+    if (fast) {
+      setColors(() => generateRandomPalette(
+        Math.floor(Math.random() * 5) + 2,
+        vibrancy,
+      ));
+
+      // Changing shader type remounts WebGL — only shuffle it occasionally while holding space.
+      if (Math.random() < 0.22) {
+        const shaderTypes = ['none', 'paper-texture', 'fluted-glass', 'water', 'image-dithering', 'halftone-dots', 'halftone-cmyk'];
+        const randomShader = shaderTypes[Math.floor(Math.random() * shaderTypes.length)];
+        setActiveShader(randomShader);
+
+        if (randomShader !== 'none') {
+          const presets = SHADER_PRESETS[randomShader];
+          if (presets && presets.length > 0) {
+            const randomPreset = presets[Math.floor(Math.random() * presets.length)];
+            setActivePreset(randomPreset.name);
+          }
+        } else {
+          setActivePreset('');
+        }
+      }
+      return;
+    }
+
     const vibrancyOptions = ['subtle', 'normal', 'vibrant'];
     const randomVibrancy = vibrancyOptions[Math.floor(Math.random() * vibrancyOptions.length)];
     setVibrancy(randomVibrancy);
 
-    const randomCount = Math.floor(Math.random() * 5) + 2; // Between 2 and 6 colors
-    setColors(prevColors => generateDifferentPalette(randomCount, randomVibrancy, prevColors));
-
-    // Randomize blur strength between 50 and 75, and ensure blur is enabled
-    setBlurStrength(Math.floor(Math.random() * 26) + 50);
-    setIsBlurred(true);
+    const randomCount = Math.floor(Math.random() * 5) + 2;
+    setColors((prevColors) => generateDifferentPalette(randomCount, randomVibrancy, prevColors));
 
     const shaderTypes = ['none', 'paper-texture', 'fluted-glass', 'water', 'image-dithering', 'halftone-dots', 'halftone-cmyk'];
     const randomShader = shaderTypes[Math.floor(Math.random() * shaderTypes.length)];
@@ -818,15 +880,61 @@ function App() {
     } else {
       setActivePreset('');
     }
-  };
+  }, [vibrancy]);
+
+  const randomizeRef = useRef(randomize);
+  randomizeRef.current = randomize;
+
+  const handleGradientRender = useCallback((dataUrl, generation) => {
+    if (generation !== renderGenerationRef.current) return;
+
+    if (isRapidRandomizingRef.current) {
+      pendingGradientUrlRef.current = dataUrl;
+      pendingGradientGenerationRef.current = generation;
+      if (gradientFeedRafRef.current) return;
+
+      gradientFeedRafRef.current = requestAnimationFrame(() => {
+        gradientFeedRafRef.current = null;
+        if (pendingGradientGenerationRef.current !== renderGenerationRef.current) return;
+        setGradientDataUrl(pendingGradientUrlRef.current);
+      });
+      return;
+    }
+
+    setGradientDataUrl(dataUrl);
+  }, []);
+
+  const RAPID_RANDOMIZE_MS = 80;
+  const RAPID_ACTIVATE_MS = 150;
 
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
         e.preventDefault();
-        randomize();
-      }
+        if (e.repeat || isSpaceHeldRef.current) return;
 
+        isSpaceHeldRef.current = true;
+        wasRapidDuringHoldRef.current = false;
+        spaceDownAtRef.current = Date.now();
+
+        // One full-quality generation on press — rapid mode only after sustained hold.
+        randomizeRef.current(true, { enableRapid: false });
+
+        if (rapidActivateTimerRef.current) {
+          clearTimeout(rapidActivateTimerRef.current);
+        }
+        rapidActivateTimerRef.current = window.setTimeout(() => {
+          rapidActivateTimerRef.current = null;
+          if (!isSpaceHeldRef.current) return;
+
+          wasRapidDuringHoldRef.current = true;
+          setIsRapidRandomizing(true);
+          spaceHoldRef.current = window.setInterval(() => {
+            randomizeRef.current(true);
+          }, RAPID_RANDOMIZE_MS);
+        }, RAPID_ACTIVATE_MS);
+        return;
+      }
       // Keyboard zoom shortcuts: Cmd/Ctrl + =/+/ -/_/0
       if ((e.metaKey || e.ctrlKey) && (e.key === '=' || e.key === '+' || e.key === '-' || e.key === '_' || e.key === '0')) {
         e.preventDefault();
@@ -853,8 +961,51 @@ function App() {
         }
       }
     };
+    const handleKeyUp = (e) => {
+      if (e.code === 'Space') {
+        isSpaceHeldRef.current = false;
+
+        if (rapidActivateTimerRef.current) {
+          clearTimeout(rapidActivateTimerRef.current);
+          rapidActivateTimerRef.current = null;
+        }
+        if (spaceHoldRef.current) {
+          clearInterval(spaceHoldRef.current);
+          spaceHoldRef.current = null;
+        }
+        if (rapidEndTimerRef.current) {
+          clearTimeout(rapidEndTimerRef.current);
+          rapidEndTimerRef.current = null;
+        }
+
+        setIsRapidRandomizing(false);
+
+        if (wasRapidDuringHoldRef.current) {
+          renderGenerationRef.current += 1;
+          setRenderGeneration(renderGenerationRef.current);
+          wasRapidDuringHoldRef.current = false;
+        }
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      if (spaceHoldRef.current) {
+        clearInterval(spaceHoldRef.current);
+      }
+      if (rapidEndTimerRef.current) {
+        clearTimeout(rapidEndTimerRef.current);
+      }
+      if (rapidActivateTimerRef.current) {
+        clearTimeout(rapidActivateTimerRef.current);
+      }
+      if (gradientFeedRafRef.current) {
+        cancelAnimationFrame(gradientFeedRafRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -1133,7 +1284,7 @@ function App() {
           </div>
 
           <div className="actions-grid pt-4">
-            <button className="btn-secondary" onClick={randomize}>
+            <button className="btn-secondary" onClick={() => randomize()}>
               <RefreshCw size={14} />
               Randomize
             </button>
@@ -1157,7 +1308,13 @@ function App() {
             }}
             transition={{ type: 'spring', stiffness: 380, damping: 32 }}
           >
-            <div className="canvas-absolute-center" style={{ display: activeShader === 'none' ? 'block' : 'none' }}>
+            <div
+              className="canvas-absolute-center"
+              style={{
+                visibility: activeShader === 'none' || isRapidRandomizing ? 'visible' : 'hidden',
+                pointerEvents: 'none',
+              }}
+            >
               <GradientCanvas 
                 ref={canvasRef}
                 colors={colors}
@@ -1168,14 +1325,19 @@ function App() {
                 isBlurred={isBlurred}
                 blurStrength={blurStrength}
                 blendMode={blendMode}
-                onRender={setGradientDataUrl}
+                onRender={handleGradientRender}
                 zoom={zoom}
                 containerHeight={previewFitHeight}
                 showRing={showRing}
+                previewMaxDimension={isRapidRandomizing ? RAPID_PREVIEW_MAX_DIMENSION : null}
+                coalesceRenders={isRapidRandomizing}
+                captureForShader={activeShader !== 'none'}
+                renderGeneration={renderGeneration}
+                latestGenerationRef={renderGenerationRef}
               />
             </div>
 
-            {activeShader !== 'none' && (
+            {activeShader !== 'none' && !isRapidRandomizing && (
               <div className="canvas-absolute-center">
                 <ShaderPreview 
                   ref={shaderRef}

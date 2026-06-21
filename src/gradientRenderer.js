@@ -8,6 +8,9 @@ export function renderGradient(ctx, {
   blendMode = 'dynamic',
   showRing = false,
 }) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+
   let s = seed;
   const random = () => {
     const x = Math.sin(s++) * 10000;
