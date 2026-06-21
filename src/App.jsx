@@ -1,5 +1,25 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Download, RefreshCw, Plus, Trash2, Monitor, Smartphone, Square, Layout, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { Download, RefreshCw, Plus, Trash2, Monitor, Smartphone, Square, Layout, ZoomIn, ZoomOut, Maximize, Check, ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ColorPicker,
+  DialogTrigger,
+  Button as AriaButton,
+  ColorSwatch,
+  Popover,
+  Dialog,
+  ColorArea,
+  ColorThumb,
+  ColorSlider,
+  SliderTrack,
+  ColorField,
+  Label,
+  Input,
+  ColorSwatchPicker,
+  ColorSwatchPickerItem,
+  parseColor
+} from 'react-aria-components';
+import { Slider as SliderPrimitive } from '@base-ui/react/slider';
 import GradientCanvas from './GradientCanvas';
 import ShaderPreview from './ShaderPreview';
 import { 
@@ -29,6 +49,22 @@ const BLEND_MODES = [
   { label: 'Overlay (Contrast)', value: 'overlay' },
   { label: 'Color Dodge (Vibrant)', value: 'color-dodge' },
   { label: 'Exclusion (Experimental)', value: 'exclusion' },
+];
+
+const VIBRANCY_OPTIONS = [
+  { label: 'Subtle', value: 'subtle' },
+  { label: 'Normal', value: 'normal' },
+  { label: 'Vibrant', value: 'vibrant' }
+];
+
+const SHADER_OPTIONS = [
+  { label: 'None', value: 'none' },
+  { label: 'Paper Texture', value: 'paper-texture' },
+  { label: 'Fluted Glass', value: 'fluted-glass' },
+  { label: 'Water', value: 'water' },
+  { label: 'Image Dithering', value: 'image-dithering' },
+  { label: 'Halftone Dots', value: 'halftone-dots' },
+  { label: 'Halftone CMYK', value: 'halftone-cmyk' }
 ];
 
 const SHADER_PRESETS = {
@@ -135,6 +171,172 @@ const generateHarmonicPalette = (count, vibrancy = 'vibrant') => {
   }
   return newColors;
 };
+
+function TakiSlider({ value, min = 0, max = 100, step = 1, onChange }) {
+  return (
+    <div className="taki-slider-control">
+      <SliderPrimitive.Root
+        className="taki-slider-root"
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        thumbAlignment="edge"
+        onValueChange={(val) => {
+          const num = Array.isArray(val) ? val[0] : val;
+          if (typeof num === 'number' && !isNaN(num)) {
+            onChange(num);
+          }
+        }}
+      >
+        <SliderPrimitive.Control className="taki-slider-wrapper">
+          <SliderPrimitive.Track className="taki-slider-track">
+            <SliderPrimitive.Indicator className="taki-slider-indicator" />
+          </SliderPrimitive.Track>
+          <SliderPrimitive.Thumb className="taki-slider-thumb hidden-thumb" />
+        </SliderPrimitive.Control>
+      </SliderPrimitive.Root>
+    </div>
+  );
+}
+
+function HexPicker({ value, onChange }) {
+  const color = React.useMemo(() => {
+    try {
+      return parseColor(value);
+    } catch {
+      return parseColor("#000000");
+    }
+  }, [value]);
+
+  const handleChange = (newColor) => {
+    onChange(newColor.toString("hex"));
+  };
+
+  return (
+    <ColorPicker value={color} onChange={handleChange}>
+      <DialogTrigger>
+        <AriaButton className="color-picker-trigger-btn">
+          <ColorSwatch className="color-picker-trigger-swatch" />
+        </AriaButton>
+        <Popover placement="bottom start" crossOffset={-13} className="color-picker-popover">
+          <Dialog className="color-picker-dialog">
+            <div>
+              <ColorArea
+                colorSpace="hsb"
+                xChannel="saturation"
+                yChannel="brightness"
+                className="color-picker-area"
+              >
+                <ColorThumb className="color-picker-thumb" />
+              </ColorArea>
+              <ColorSlider colorSpace="hsb" channel="hue" className="color-picker-slider">
+                <SliderTrack className="color-picker-track">
+                  <ColorThumb className="color-picker-thumb" style={{ top: '50%' }} />
+                </SliderTrack>
+              </ColorSlider>
+            </div>
+            <ColorField colorSpace="hsb" className="color-field-container">
+              <Label className="color-field-label">Hex</Label>
+              <Input className="color-field-input" />
+            </ColorField>
+            <ColorSwatchPicker className="color-picker-swatchpicker">
+              {['#F00', '#f90', '#0F0', '#08f', '#00f'].map((c) => (
+                <ColorSwatchPickerItem key={c} color={c} className="color-picker-swatchpicker-item">
+                  <ColorSwatch className="color-picker-swatchpicker-swatch" />
+                </ColorSwatchPickerItem>
+              ))}
+            </ColorSwatchPicker>
+          </Dialog>
+        </Popover>
+      </DialogTrigger>
+    </ColorPicker>
+  );
+}
+
+function AnimatedSelect({ label, value, options, onChange }) {
+  const [open, setOpen] = useState(false);
+  const selectedLabel = options.find(o => o.value === value)?.label || value;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <div className="setting-row">
+        <label className="control-label">{label}</label>
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', 
+            color: 'var(--text-muted)', border: 'none', background: 'transparent', 
+            cursor: 'pointer', padding: 0, fontFamily: 'inherit',
+            transition: 'color 0.2s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-main)'}
+          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+        >
+          <AnimatePresence mode="popLayout" initial={false}>
+            {!open && (
+              <motion.span
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+                style={{ color: 'inherit' }}
+              >
+                {selectedLabel}
+              </motion.span>
+            )}
+          </AnimatePresence>
+          <ChevronDown
+            size={16}
+            style={{
+              transition: 'transform 0.2s',
+              transform: open ? 'rotate(180deg)' : 'rotate(0deg)'
+            }}
+          />
+        </button>
+      </div>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}
+          >
+            {options.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                style={{
+                  display: 'flex', width: '100%', cursor: 'pointer', alignItems: 'center', 
+                  justifyContent: 'space-between', padding: '6px 0', fontSize: '14px',
+                  background: 'transparent', border: 'none', fontFamily: 'inherit',
+                  color: value === opt.value ? 'var(--text-main)' : 'var(--text-muted)',
+                  fontWeight: value === opt.value ? '500' : '400',
+                  transition: 'color 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-main)'}
+                onMouseLeave={(e) => e.currentTarget.style.color = value === opt.value ? 'var(--text-main)' : 'var(--text-muted)'}
+                onClick={() => {
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+              >
+                <span>{opt.label}</span>
+                {value === opt.value && (
+                  <Check size={16} color="var(--accent)" />
+                )}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 function App() {
   const [colors, setColors] = useState([...DEFAULT_COLORS]);
   const [activeRatio, setActiveRatio] = useState(RATIOS[0]);
@@ -145,11 +347,72 @@ function App() {
   const [vibrancy, setVibrancy] = useState('vibrant');
   const [activeShader, setActiveShader] = useState('none');
   const [activePreset, setActivePreset] = useState('');
+  const [hoveredRatio, setHoveredRatio] = useState(null);
+  const [hoveredPreset, setHoveredPreset] = useState(null);
   const [gradientDataUrl, setGradientDataUrl] = useState(null);
   const [zoom, setZoom] = useState(1);
   
   const canvasRef = useRef(null);
   const shaderRef = useRef(null);
+
+  const generateHarmonicColors = (baseHue, count, vibrancyType) => {
+    const newColors = [];
+    let s = 80;
+    let l = 50;
+
+    for (let i = 0; i < count; i++) {
+      let h = baseHue;
+      if (vibrancyType === 'pastel') {
+        s = 55 + Math.random() * 15;
+        l = 75 + Math.random() * 15;
+        h = (baseHue + (i * (360 / count))) % 360;
+      } else if (vibrancyType === 'monochrome') {
+        s = 10 + Math.random() * 20;
+        l = 15 + (i * (75 / count));
+      } else if (vibrancyType === 'neon') {
+        s = 95 + Math.random() * 5;
+        l = 45 + Math.random() * 10;
+        h = (baseHue + (i * 45)) % 360;
+      } else { // vibrant
+        s = 75 + Math.random() * 20;
+        l = 40 + Math.random() * 20;
+        if (count === 2) {
+          if (i === 1) h = (baseHue + 180) % 360;
+        } else if (count === 3) {
+          if (i === 1) h = (baseHue + 120) % 360;
+          else if (i === 2) h = (baseHue + 240) % 360;
+        } else {
+          if (i === 1) h = (baseHue + 90) % 360;
+          else if (i === 2) h = (baseHue + 180) % 360;
+          else h = (baseHue + 220) % 360;
+          h = (h + (Math.random() * 20 - 10)) % 360;
+        }
+        
+        // Dynamic contrast for vibrant
+        if (i % 2 === 1) {
+          l = Math.max(15, l - 15);
+        } else {
+          l = Math.min(85, l + 15);
+        }
+        
+        if (i === count - 1) {
+           l = Math.random() > 0.5 ? 10 + Math.random() * 10 : 90 + Math.random() * 8;
+           s = 90 + Math.random() * 10;
+        }
+      }
+      
+      if (h < 0) h += 360;
+      const rgb = rybHsl2rgb([h, s / 100, l / 100]);
+      newColors.push(rgbToHex(rgb[0], rgb[1], rgb[2]));
+    }
+    return newColors;
+  };
+
+  const handleColorChange = (index, value) => {
+    const newColors = [...colors];
+    newColors[index] = value;
+    setColors(newColors);
+  };
 
   useEffect(() => {
     setZoom(1);
@@ -167,12 +430,6 @@ function App() {
     }
   };
 
-  const handleColorChange = (index, value) => {
-    const newColors = [...colors];
-    newColors[index] = value;
-    setColors(newColors);
-  };
-
   const addColor = () => {
     if (colors.length < 6) {
       setColors([...colors, '#ffffff']);
@@ -184,6 +441,12 @@ function App() {
       const newColors = colors.filter((_, i) => i !== index);
       setColors(newColors);
     }
+  };
+
+  const randomizePalette = () => {
+    const randomVibrancy = ['vibrant', 'pastel', 'monochrome', 'neon'][Math.floor(Math.random() * 4)];
+    const randomCount = Math.floor(Math.random() * 5) + 2; // Between 2 and 6 colors
+    setColors(generateHarmonicPalette(randomCount, randomVibrancy));
   };
 
   const randomize = () => {
@@ -241,6 +504,9 @@ function App() {
     }
   };
 
+  const highlightedRatio = hoveredRatio !== null ? hoveredRatio : activeRatio.label;
+  const highlightedPreset = hoveredPreset !== null ? hoveredPreset : activePreset;
+
   return (
     <div className="app-container">
       {/* Sidebar Controls */}
@@ -267,11 +533,9 @@ function App() {
           <div className="color-list">
             {colors.map((c, i) => (
               <div key={i} className="color-item">
-                <input 
-                  type="color" 
+                <HexPicker 
                   value={c} 
-                  onChange={(e) => handleColorChange(i, e.target.value)}
-                  className="color-picker"
+                  onChange={(val) => handleColorChange(i, val)}
                 />
                 <input 
                   type="text" 
@@ -285,7 +549,7 @@ function App() {
                 />
                 {colors.length > 2 && (
                   <button onClick={() => removeColor(i)} className="btn-remove" title="Remove Color">
-                    <Trash2 size={16} />
+                    <Trash2 size={14} />
                   </button>
                 )}
               </div>
@@ -298,115 +562,109 @@ function App() {
             <label className="control-label" style={{ marginBottom: 0 }}>Blur Strength</label>
             <span className="slider-value">{blurStrength}%</span>
           </div>
-          <input 
-            type="range" 
-            min="0" 
-            max="100" 
-            value={blurStrength} 
-            onChange={(e) => {
-              const val = parseInt(e.target.value, 10);
+          <TakiSlider 
+            value={blurStrength}
+            min={0}
+            max={100}
+            onChange={(val) => {
               setBlurStrength(val);
               if (val > 0) {
                 setIsBlurred(true);
               }
             }}
-            className="range-input"
           />
         </div>
 
-        <div className="control-group">
-          <label className="control-label">Vibrancy</label>
-          <select 
-            value={vibrancy} 
-            onChange={(e) => {
-              const val = e.target.value;
-              setVibrancy(val);
-              setColors(prevColors => generateHarmonicPalette(prevColors.length, val));
-            }}
-            className="select-input"
-          >
-            <option value="subtle">Subtle</option>
-            <option value="normal">Normal</option>
-            <option value="vibrant">Vibrant</option>
-          </select>
-        </div>
+        <AnimatedSelect
+          label="Vibrancy"
+          value={vibrancy}
+          options={VIBRANCY_OPTIONS}
+          onChange={(val) => {
+            setVibrancy(val);
+            setColors(prevColors => generateHarmonicPalette(prevColors.length, val));
+          }}
+        />
+
+        <AnimatedSelect
+          label="Blend Mode"
+          value={blendMode}
+          options={BLEND_MODES}
+          onChange={(val) => setBlendMode(val)}
+        />
 
         <div className="control-group">
-          <label className="control-label">Blend Mode</label>
-          <select 
-            value={blendMode} 
-            onChange={(e) => setBlendMode(e.target.value)}
-            className="select-input"
-          >
-            {BLEND_MODES.map((mode) => (
-              <option key={mode.value} value={mode.value}>
-                {mode.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="control-group">
-          <label className="control-label">Shader Overlay</label>
-          <select 
-            value={activeShader} 
-            onChange={(e) => handleShaderChange(e.target.value)}
-            className="select-input"
-          >
-            <option value="none">None</option>
-            <option value="paper-texture">Paper Texture</option>
-            <option value="fluted-glass">Fluted Glass</option>
-            <option value="water">Water</option>
-            <option value="image-dithering">Image Dithering</option>
-            <option value="halftone-dots">Halftone Dots</option>
-            <option value="halftone-cmyk">Halftone CMYK</option>
-          </select>
+          <AnimatedSelect
+            label="Shader"
+            value={activeShader}
+            options={SHADER_OPTIONS}
+            onChange={(val) => handleShaderChange(val)}
+          />
 
           {activeShader !== 'none' && SHADER_PRESETS[activeShader] && SHADER_PRESETS[activeShader].length > 1 && (
-            <div className="preset-grid">
-              {SHADER_PRESETS[activeShader].map((preset) => (
-                <button
-                  key={preset.name}
-                  className={`preset-btn ${activePreset === preset.name ? 'active' : ''}`}
-                  onClick={() => setActivePreset(preset.name)}
-                >
-                  {preset.name}
-                </button>
-              ))}
+            <div className="preset-grid" onMouseLeave={() => setHoveredPreset(null)}>
+              {SHADER_PRESETS[activeShader].map((preset) => {
+                const isHighlighted = preset.name === highlightedPreset;
+                return (
+                  <button
+                    key={preset.name}
+                    className={`preset-btn ${isHighlighted ? 'active' : ''}`}
+                    onClick={() => setActivePreset(preset.name)}
+                    onMouseEnter={() => setHoveredPreset(preset.name)}
+                  >
+                    {isHighlighted && (
+                      <motion.div
+                        layoutId="preset-active-pill"
+                        className="btn-active-pill"
+                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                    <span>{preset.name}</span>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
 
-        <div className="control-group" style={{ marginTop: 'auto' }}>
-          <label className="control-label">Aspect Ratio</label>
-          <div className="aspect-ratios">
-            {RATIOS.map((ratio) => {
-              const Icon = ratio.icon;
-              return (
-                <button
-                  key={ratio.label}
-                  className={`ratio-btn ${activeRatio.label === ratio.label ? 'active' : ''}`}
-                  onClick={() => setActiveRatio(ratio)}
-                >
-                  <Icon size={18} strokeWidth={2} />
-                  {ratio.label}
-                </button>
-              );
-            })}
+        <div className="pt-4 mt-auto">
+          <div className="control-group">
+            <label className="control-label">Aspect Ratio</label>
+            <div className="aspect-ratios" onMouseLeave={() => setHoveredRatio(null)}>
+              {RATIOS.map((ratio) => {
+                const Icon = ratio.icon;
+                const isHighlighted = ratio.label === highlightedRatio;
+                return (
+                  <button
+                    key={ratio.label}
+                    className={`ratio-btn ${isHighlighted ? 'active' : ''}`}
+                    onClick={() => setActiveRatio(ratio)}
+                    onMouseEnter={() => setHoveredRatio(ratio.label)}
+                    title={ratio.label}
+                  >
+                    {isHighlighted && (
+                      <motion.div
+                        layoutId="ratio-active-pill"
+                        className="btn-active-pill"
+                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                    <Icon size={16} strokeWidth={2} />
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
 
-        <div className="control-group" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-
-          <button className="btn-secondary" onClick={randomize}>
-            <RefreshCw size={18} />
-            Randomize
-          </button>
-          
-          <button className="btn-primary" onClick={handleExport}>
-            <Download size={18} />
-            Export
-          </button>
+          <div className="actions-grid pt-4">
+            <button className="btn-secondary" onClick={randomize}>
+              <RefreshCw size={14} />
+              Randomize
+            </button>
+            <button className="btn-primary" onClick={handleExport}>
+              <Download size={14} />
+              Export
+            </button>
+          </div>
         </div>
       </div>
 
