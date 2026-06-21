@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { Download, RefreshCw, Plus, Trash2, Monitor, Smartphone, Square, Layout, Check, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -376,6 +376,12 @@ function App() {
   const canvasRef = useRef(null);
   const shaderRef = useRef(null);
   const containerRef = useRef(null);
+  const zoomAnchorRef = useRef(null);
+  const layoutRef = useRef({ wrapperWidth: 0, wrapperHeight: 0 });
+  const wheelZoomRef = useRef({ pendingDelta: 0, rafId: 0 });
+  const scrollStateRef = useRef(null);
+  const prevZoomRef = useRef(1);
+  const PREVIEW_PADDING = 48;
   const [containerHeight, setContainerHeight] = useState(() => {
     if (typeof window !== 'undefined') {
       return Math.max(400, window.innerHeight - 150);
@@ -456,6 +462,8 @@ function App() {
   };
 
   useEffect(() => {
+    zoomAnchorRef.current = null;
+    scrollStateRef.current = null;
     setZoom(1);
   }, [activeRatio]);
 
@@ -529,12 +537,26 @@ function App() {
       // Keyboard zoom shortcuts: Cmd/Ctrl + =/+/ -/_/0
       if ((e.metaKey || e.ctrlKey) && (e.key === '=' || e.key === '+' || e.key === '-' || e.key === '_' || e.key === '0')) {
         e.preventDefault();
-        if (e.key === '=' || e.key === '+') {
+        const container = containerRef.current;
+        if (container) {
+          const { clientWidth, clientHeight, scrollLeft, scrollTop } = container;
+          const layout = layoutRef.current;
+          zoomAnchorRef.current = {
+            contentX: scrollLeft + clientWidth / 2,
+            contentY: scrollTop + clientHeight / 2,
+            viewportX: clientWidth / 2,
+            viewportY: clientHeight / 2,
+            scrollWidth: Math.max(clientWidth, layout.wrapperWidth),
+            scrollHeight: Math.max(clientHeight, layout.wrapperHeight),
+          };
+        }
+        if (e.key === '0') {
+          zoomAnchorRef.current = null;
+          setZoom(1);
+        } else if (e.key === '=' || e.key === '+') {
           setZoom(prev => Math.min(4.0, prev + 0.25));
         } else if (e.key === '-' || e.key === '_') {
           setZoom(prev => Math.max(0.25, prev - 0.25));
-        } else if (e.key === '0') {
-          setZoom(1);
         }
       }
     };
@@ -547,21 +569,46 @@ function App() {
     if (!container) return;
 
     const handleWheel = (e) => {
-      // Check for Cmd/Ctrl key (or trackpad pinch gesture which emulates ctrlKey on macOS)
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        const zoomIntensity = 0.005;
-        const delta = -e.deltaY * zoomIntensity;
-        setZoom((prevZoom) => {
-          const nextZoom = prevZoom * (1 + delta);
-          return Math.min(4.0, Math.max(0.25, nextZoom));
-        });
-      }
+      if (!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+
+      const rect = container.getBoundingClientRect();
+      const layout = layoutRef.current;
+      const viewportX = e.clientX - rect.left;
+      const viewportY = e.clientY - rect.top;
+
+      zoomAnchorRef.current = {
+        contentX: container.scrollLeft + viewportX,
+        contentY: container.scrollTop + viewportY,
+        viewportX,
+        viewportY,
+        scrollWidth: Math.max(container.clientWidth, layout.wrapperWidth),
+        scrollHeight: Math.max(container.clientHeight, layout.wrapperHeight),
+      };
+
+      wheelZoomRef.current.pendingDelta += -e.deltaY * 0.005;
+      if (wheelZoomRef.current.rafId) return;
+
+      wheelZoomRef.current.rafId = requestAnimationFrame(() => {
+        const { pendingDelta } = wheelZoomRef.current;
+        wheelZoomRef.current.pendingDelta = 0;
+        wheelZoomRef.current.rafId = 0;
+
+        if (pendingDelta !== 0) {
+          setZoom((prevZoom) => {
+            const nextZoom = prevZoom * (1 + pendingDelta);
+            return Math.min(4.0, Math.max(0.25, nextZoom));
+          });
+        }
+      });
     };
 
     container.addEventListener('wheel', handleWheel, { passive: false });
     return () => {
       container.removeEventListener('wheel', handleWheel);
+      if (wheelZoomRef.current.rafId) {
+        cancelAnimationFrame(wheelZoomRef.current.rafId);
+      }
     };
   }, []);
 
@@ -587,8 +634,52 @@ function App() {
   const renderScale = (activeContainerHeight / activeRatio.height) * zoom;
   const canvasWidth = activeRatio.width * renderScale;
   const canvasHeight = activeRatio.height * renderScale;
-  const wrapperWidth = canvasWidth + 96;
-  const wrapperHeight = canvasHeight + 96;
+  const wrapperWidth = canvasWidth + PREVIEW_PADDING * 2;
+  const wrapperHeight = canvasHeight + PREVIEW_PADDING * 2;
+
+  layoutRef.current = { wrapperWidth, wrapperHeight };
+
+  const zoomChanged = prevZoomRef.current !== zoom;
+  prevZoomRef.current = zoom;
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const { clientWidth, clientHeight } = container;
+    const scrollWidth = Math.max(clientWidth, wrapperWidth);
+    const scrollHeight = Math.max(clientHeight, wrapperHeight);
+    const anchor = zoomAnchorRef.current;
+    const prev = scrollStateRef.current;
+
+    if (zoomChanged && anchor && anchor.scrollWidth > 0 && anchor.scrollHeight > 0) {
+      container.scrollLeft = Math.max(
+        0,
+        (anchor.contentX / anchor.scrollWidth) * scrollWidth - anchor.viewportX
+      );
+      container.scrollTop = Math.max(
+        0,
+        (anchor.contentY / anchor.scrollHeight) * scrollHeight - anchor.viewportY
+      );
+    } else if (prev && prev.scrollWidth > 0 && prev.scrollHeight > 0) {
+      const centerX = prev.scrollLeft + prev.clientWidth / 2;
+      const centerY = prev.scrollTop + prev.clientHeight / 2;
+      container.scrollLeft = Math.max(0, (centerX / prev.scrollWidth) * scrollWidth - clientWidth / 2);
+      container.scrollTop = Math.max(0, (centerY / prev.scrollHeight) * scrollHeight - clientHeight / 2);
+    } else {
+      container.scrollLeft = Math.max(0, (scrollWidth - clientWidth) / 2);
+      container.scrollTop = Math.max(0, (scrollHeight - clientHeight) / 2);
+    }
+
+    scrollStateRef.current = {
+      scrollWidth,
+      scrollHeight,
+      clientWidth,
+      clientHeight,
+      scrollLeft: container.scrollLeft,
+      scrollTop: container.scrollTop,
+    };
+  }, [zoom, wrapperWidth, wrapperHeight, containerHeight, activeRatio.width, activeRatio.height, activeShader]);
 
   return (
     <div className="app-container">
@@ -754,7 +845,7 @@ function App() {
       {/* Main Canvas Area */}
       <div className="main-content">
         <div className="preview-scroll-container" ref={containerRef}>
-          <div 
+          <div
             className="preview-content-wrapper"
             style={{
               width: `${wrapperWidth}px`,
