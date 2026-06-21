@@ -295,7 +295,7 @@ const generateFettePalette = (count, vibrancy = 'vibrant') => {
     ? [0.8, 0.85]
     : [1.0, 0.95];
 
-  const curveMethods = ['arc', 'pow', 'powY', 'easeInOutSine', 'easeInOutCubic'];
+  const curveMethods = ['lamé', 'arc', 'pow', 'powY', 'powX'];
   const curveMethod = curveMethods[Math.floor(Math.random() * curveMethods.length)];
 
   const ramp = generateRandomColorRamp({
