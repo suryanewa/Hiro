@@ -17,7 +17,12 @@ import {
 } from './shaders.js';
 import { buildReactShaderSnippet, generateReplicationHtml } from './snippets.js';
 import { renderGradientToSvg } from './svgRenderer.js';
-import { createGradientConfig, validateVibrancy } from './validation.js';
+import {
+  RANDOM_MAX_ATTEMPTS,
+  createGradientConfig,
+  validateRandomGradientOptions,
+  validateVibrancy,
+} from './validation.js';
 
 function resolveRandom(randomOrSeed) {
   if (typeof randomOrSeed === 'function') return randomOrSeed;
@@ -47,6 +52,7 @@ export function listGradientMetadata() {
 }
 
 export function createRandomGradientConfig(options = {}) {
+  options = validateRandomGradientOptions(options);
   const random = resolveRandom(options.random ?? options.seed);
   const fallbackCount = randomInt(LIMITS.minColors, LIMITS.maxColors, random);
   const requestedCount = Number(options.count ?? fallbackCount);
@@ -62,7 +68,13 @@ export function createRandomGradientConfig(options = {}) {
   const colors = Array.isArray(options.colors)
     ? options.colors
     : options.previousColors
-      ? generateDifferentPalette(count, vibrancy, options.previousColors, options.maxAttempts ?? 6, random)
+      ? generateDifferentPalette(
+        count,
+        vibrancy,
+        options.previousColors,
+        options.maxAttempts ?? RANDOM_MAX_ATTEMPTS.default,
+        random,
+      )
       : generateRandomPalette(count, vibrancy, random);
   const preset = getShaderPreset(shaderSelection.shader, shaderSelection.preset);
 

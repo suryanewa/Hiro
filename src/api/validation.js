@@ -11,12 +11,19 @@ const HEX_COLOR_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 const BLEND_MODE_VALUES = new Set(CANVAS_BLEND_MODES);
 const VIBRANCY_VALUES = new Set(VIBRANCY_OPTIONS.map((option) => option.value));
 const SHADER_VALUE_SET = new Set(SHADER_VALUES);
+const RANDOM_RATIO_VALUES = new Set(['random', ...RATIOS.map((ratio) => ratio.label)]);
+
+export const RANDOM_MAX_ATTEMPTS = Object.freeze({
+  min: 1,
+  max: 12,
+  default: 6,
+});
 
 export class ApiValidationError extends Error {
-  constructor(errors) {
+  constructor(errors, status = 400) {
     super('Invalid gradient API request');
     this.name = 'ApiValidationError';
-    this.status = 400;
+    this.status = status;
     this.errors = errors;
   }
 }
@@ -150,6 +157,27 @@ function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+function hasOwnValue(input, field) {
+  return Object.prototype.hasOwnProperty.call(input, field) && typeof input[field] !== 'undefined';
+}
+
+function validateIntegerRange(input, field, min, max, errors) {
+  if (!hasOwnValue(input, field)) return null;
+  const value = input[field];
+
+  if (typeof value !== 'number' || !Number.isInteger(value)) {
+    errors.push({ field, message: `${field} must be an integer.` });
+    return null;
+  }
+
+  if (value < min || value > max) {
+    errors.push({ field, message: `${field} must be between ${min} and ${max}.` });
+    return null;
+  }
+
+  return value;
+}
+
 export function validateVibrancy(value) {
   return VIBRANCY_VALUES.has(value);
 }
@@ -221,4 +249,81 @@ export function createGradientConfig(input = {}) {
     throw new ApiValidationError(result.errors);
   }
   return result.config;
+}
+
+export function validateRandomGradientOptions(input = {}) {
+  const source = typeof input === 'undefined' ? {} : input;
+  const errors = [];
+
+  if (!isPlainObject(source)) {
+    throw new ApiValidationError([{ field: 'body', message: 'Request body must be an object.' }]);
+  }
+
+  const options = { ...source };
+  const count = validateIntegerRange(source, 'count', LIMITS.minColors, LIMITS.maxColors, errors);
+  if (count !== null) {
+    options.count = count;
+  }
+
+  if (hasOwnValue(source, 'vibrancy') && !VIBRANCY_VALUES.has(source.vibrancy)) {
+    errors.push({
+      field: 'vibrancy',
+      message: `vibrancy must be one of: ${VIBRANCY_OPTIONS.map((option) => option.value).join(', ')}.`,
+    });
+  }
+
+  for (const field of ['ratio', 'ratioLabel']) {
+    if (hasOwnValue(source, field) && !RANDOM_RATIO_VALUES.has(source[field])) {
+      errors.push({
+        field,
+        message: `${field} must be one of: ${Array.from(RANDOM_RATIO_VALUES).join(', ')}.`,
+      });
+    }
+  }
+
+  for (const field of ['includeShader', 'includeNone']) {
+    if (hasOwnValue(source, field) && typeof source[field] !== 'boolean') {
+      errors.push({ field, message: `${field} must be a boolean.` });
+    }
+  }
+
+  if (hasOwnValue(source, 'previousColors')) {
+    if (!Array.isArray(source.previousColors)) {
+      errors.push({ field: 'previousColors', message: 'previousColors must be an array of hex strings.' });
+    } else if (source.previousColors.length > LIMITS.maxColors) {
+      errors.push({
+        field: 'previousColors',
+        message: `previousColors must contain no more than ${LIMITS.maxColors} values.`,
+      });
+    } else {
+      options.previousColors = source.previousColors.map((color, index) => {
+        const normalized = normalizeHexColor(color);
+        if (!normalized) {
+          errors.push({
+            field: `previousColors.${index}`,
+            message: 'Color must be a #rgb or #rrggbb hex string.',
+          });
+          return color;
+        }
+        return normalized;
+      });
+    }
+  }
+
+  const maxAttempts = validateIntegerRange(
+    source,
+    'maxAttempts',
+    RANDOM_MAX_ATTEMPTS.min,
+    RANDOM_MAX_ATTEMPTS.max,
+    errors,
+  );
+  if (maxAttempts !== null) {
+    options.maxAttempts = maxAttempts;
+  }
+
+  if (errors.length > 0) {
+    throw new ApiValidationError(errors);
+  }
+
+  return options;
 }

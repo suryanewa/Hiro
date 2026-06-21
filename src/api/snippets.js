@@ -9,6 +9,26 @@ const SHADER_REACT_COMPONENTS = {
   'halftone-cmyk': 'HalftoneCmyk',
 };
 
+function escapeHtmlMetadata(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function escapeCssString(value) {
+  return String(value)
+    .replaceAll('\\', '\\\\')
+    .replaceAll("'", "\\'")
+    .replaceAll('\n', '\\A ')
+    .replaceAll('\r', '\\D ')
+    .replaceAll('\f', '\\C ')
+    .replaceAll('<', '\\3C ')
+    .replaceAll('>', '\\3E ');
+}
+
 function getShaderScale(shaderType) {
   if (shaderType === 'water' || shaderType === 'fluted-glass') return 1.25;
   if (shaderType === 'paper-texture') return 1.15;
@@ -150,6 +170,10 @@ export function generateReplicationHtml(config, { rendererSource } = {}) {
   const shaderLabel = hasShader
     ? `${activeShader}${activePreset ? ` (${activePreset})` : ''}`
     : null;
+  const safeRatioLabel = escapeHtmlMetadata(ratioLabel);
+  const safeSizeLabel = escapeHtmlMetadata(`${width}x${height}`);
+  const safeShaderLabel = shaderLabel ? escapeHtmlMetadata(shaderLabel) : null;
+  const safePngFilename = escapeCssString(pngFilename);
 
   if (hasShader) {
     return `<!DOCTYPE html>
@@ -157,25 +181,25 @@ export function generateReplicationHtml(config, { rendererSource } = {}) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hiro Background - ${ratioLabel} (${width}x${height})</title>
+  <title>Hiro Background - ${safeRatioLabel} (${safeSizeLabel})</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
     .background {
       position: fixed;
       inset: 0;
-      background: center / cover no-repeat url('${pngFilename}');
+      background: center / cover no-repeat url('${safePngFilename}');
     }
   </style>
 </head>
 <body>
   <!--
-    Shader: ${shaderLabel}
-    This page uses the exported PNG (${width}x${height}) which includes the shader effect.
+    Shader: ${safeShaderLabel}
+    This page uses the exported PNG (${safeSizeLabel}) which includes the shader effect.
     For a live, parametric version with the same shader, use GradientBackground.jsx
     and gradientRenderer.js from this export bundle.
   -->
-  <div class="background" role="img" aria-label="Hiro background with ${shaderLabel} shader"></div>
+  <div class="background" role="img" aria-label="Hiro background with ${safeShaderLabel} shader"></div>
 </body>
 </html>`;
   }
@@ -185,7 +209,7 @@ export function generateReplicationHtml(config, { rendererSource } = {}) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hiro Background - ${ratioLabel} (${width}x${height})</title>
+  <title>Hiro Background - ${safeRatioLabel} (${safeSizeLabel})</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }

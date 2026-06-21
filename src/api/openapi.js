@@ -1,6 +1,42 @@
-import { API_VERSION } from './constants.js';
+import {
+  API_VERSION,
+  CANVAS_BLEND_MODES,
+  LIMITS,
+  RATIOS,
+  VIBRANCY_OPTIONS,
+} from './constants.js';
+import { SHADER_VALUES } from './shaders.js';
+import { RANDOM_MAX_ATTEMPTS } from './validation.js';
+
+const HEX_COLOR_PATTERN = '^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$';
+
+function renderPath() {
+  return {
+    post: {
+      summary: 'Render a gradient as SVG',
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/GradientConfigInput' },
+          },
+        },
+      },
+      responses: {
+        200: {
+          description: 'SVG image',
+          content: { 'image/svg+xml': {} },
+        },
+        400: { description: 'Validation error' },
+      },
+    },
+  };
+}
 
 export function buildOpenApiSpec({ baseUrl = 'http://localhost:8787' } = {}) {
+  const ratioLabels = RATIOS.map((ratio) => ratio.label);
+  const vibrancyValues = VIBRANCY_OPTIONS.map((option) => option.value);
+
   return {
     openapi: '3.1.0',
     info: {
@@ -79,26 +115,8 @@ export function buildOpenApiSpec({ baseUrl = 'http://localhost:8787' } = {}) {
           },
         },
       },
-      '/api/gradients/render': {
-        post: {
-          summary: 'Render a gradient as SVG',
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/GradientConfigInput' },
-              },
-            },
-          },
-          responses: {
-            200: {
-              description: 'SVG image',
-              content: { 'image/svg+xml': {} },
-            },
-            400: { description: 'Validation error' },
-          },
-        },
-      },
+      '/api/gradients/render': renderPath(),
+      '/api/gradients/svg': renderPath(),
       '/api/gradients/html': {
         post: {
           summary: 'Create standalone replication HTML for a gradient',
@@ -152,25 +170,29 @@ export function buildOpenApiSpec({ baseUrl = 'http://localhost:8787' } = {}) {
           properties: {
             colors: {
               type: 'array',
-              minItems: 2,
-              maxItems: 6,
-              items: { type: 'string', pattern: '^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$' },
+              minItems: LIMITS.minColors,
+              maxItems: LIMITS.maxColors,
+              items: { type: 'string', pattern: HEX_COLOR_PATTERN },
             },
-            width: { type: 'integer', minimum: 1, maximum: 8192 },
-            height: { type: 'integer', minimum: 1, maximum: 8192 },
-            ratio: { type: 'string', examples: ['16:9', '1:1', '9:16', 'Web'] },
+            width: { type: 'integer', minimum: LIMITS.minDimension, maximum: LIMITS.maxDimension },
+            height: { type: 'integer', minimum: LIMITS.minDimension, maximum: LIMITS.maxDimension },
+            ratio: { type: 'string', enum: ratioLabels },
             ratioLabel: { type: 'string' },
             seed: { type: 'number' },
             isBlurred: { type: 'boolean' },
-            blurStrength: { type: 'number', minimum: 0, maximum: 100 },
+            blurStrength: {
+              type: 'number',
+              minimum: LIMITS.minBlurStrength,
+              maximum: LIMITS.maxBlurStrength,
+            },
             blendMode: {
               type: 'string',
-              enum: ['source-over', 'dynamic', 'screen', 'overlay', 'color-dodge', 'exclusion', 'multiply', 'soft-light'],
+              enum: [...CANVAS_BLEND_MODES],
             },
             showRing: { type: 'boolean' },
             activeShader: {
               type: 'string',
-              enum: ['none', 'paper-texture', 'fluted-glass', 'water', 'image-dithering', 'halftone-dots', 'halftone-cmyk'],
+              enum: [...SHADER_VALUES],
             },
             activePreset: { type: 'string' },
             presetParams: { type: 'object', additionalProperties: true },
@@ -180,15 +202,22 @@ export function buildOpenApiSpec({ baseUrl = 'http://localhost:8787' } = {}) {
           type: 'object',
           properties: {
             seed: { oneOf: [{ type: 'string' }, { type: 'number' }] },
-            count: { type: 'integer', minimum: 2, maximum: 6 },
-            vibrancy: { type: 'string', enum: ['subtle', 'normal', 'vibrant'] },
-            ratio: { type: 'string' },
+            count: { type: 'integer', minimum: LIMITS.minColors, maximum: LIMITS.maxColors },
+            vibrancy: { type: 'string', enum: vibrancyValues },
+            ratio: { type: 'string', enum: ['random', ...ratioLabels] },
             previousColors: {
               type: 'array',
-              items: { type: 'string' },
+              maxItems: LIMITS.maxColors,
+              items: { type: 'string', pattern: HEX_COLOR_PATTERN },
             },
             includeShader: { type: 'boolean' },
             includeNone: { type: 'boolean' },
+            maxAttempts: {
+              type: 'integer',
+              minimum: RANDOM_MAX_ATTEMPTS.min,
+              maximum: RANDOM_MAX_ATTEMPTS.max,
+              default: RANDOM_MAX_ATTEMPTS.default,
+            },
           },
         },
       },

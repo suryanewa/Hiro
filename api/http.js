@@ -32,18 +32,25 @@ function readRequestBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
+    let tooLarge = false;
 
     req.on('data', (chunk) => {
+      if (tooLarge) return;
+
       size += chunk.length;
       if (size > JSON_LIMIT_BYTES) {
-        reject(new ApiValidationError([{ field: 'body', message: 'Request body is too large.' }]));
-        req.destroy();
+        tooLarge = true;
+        chunks.length = 0;
+        reject(new ApiValidationError([{ field: 'body', message: 'Request body is too large.' }], 413));
         return;
       }
+
       chunks.push(chunk);
     });
 
     req.on('end', () => {
+      if (tooLarge) return;
+
       if (!chunks.length) {
         resolve({});
         return;
@@ -151,9 +158,10 @@ export function createApiServer() {
         return;
       }
 
+      console.error(error);
       sendJson(res, 500, {
         error: 'internal_error',
-        message: error instanceof Error ? error.message : 'Unexpected API error.',
+        message: 'Unexpected API error.',
       });
     }
   });
