@@ -268,9 +268,14 @@ const GradientCanvas = forwardRef(({ colors, width, height, seed, glassIntensity
     // Reset composite operation
     ctx.globalCompositeOperation = 'source-over';
 
-    // 4. Draw Edge Ring (if enabled) as the top layer (unblurred) with plus-lighter blend mode
+    // 4. Draw Edge Ring (if enabled) as the top layer with a separate blur and plus-lighter blend mode
     if (showRing) {
       ctx.globalCompositeOperation = 'plus-lighter';
+      
+      // Apply blur filter just for the edge frame stroke
+      const ringBlurAmount = Math.max(width, height) * 0.15 * (blurStrength / 100);
+      ctx.filter = isBlurred && blurStrength > 0 ? `blur(${ringBlurAmount}px)` : 'none';
+      
       ctx.strokeStyle = colors[0] || '#000000';
       
       // Calculate a responsive line width (e.g. 12% of the canvas smaller dimension)
@@ -285,7 +290,8 @@ const GradientCanvas = forwardRef(({ colors, width, height, seed, glassIntensity
         height - strokeThickness
       );
       
-      // Reset composite operation after drawing
+      // Reset filter and composite operation after drawing
+      ctx.filter = 'none';
       ctx.globalCompositeOperation = 'source-over';
     }
 
