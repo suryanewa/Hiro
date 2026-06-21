@@ -5,6 +5,7 @@ import { renderGradientToDataUrl } from './exportBackground';
 
 const RATIO_TRANSITION = { type: 'spring', stiffness: 380, damping: 32 };
 const RAPID_PREVIEW_MAX_DIMENSION = 960;
+const BLUR_SCRUB_PREVIEW_MAX_DIMENSION = 720;
 
 const GradientCanvas = forwardRef(({
   colors,
@@ -163,5 +164,5 @@ const GradientCanvas = forwardRef(({
   );
 });
 
-export { RAPID_PREVIEW_MAX_DIMENSION };
+export { RAPID_PREVIEW_MAX_DIMENSION, BLUR_SCRUB_PREVIEW_MAX_DIMENSION };
 export default GradientCanvas;

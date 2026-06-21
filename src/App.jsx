@@ -20,7 +20,7 @@ import {
   parseColor
 } from 'react-aria-components';
 import { Slider as SliderPrimitive } from '@base-ui/react/slider';
-import GradientCanvas, { RAPID_PREVIEW_MAX_DIMENSION } from './GradientCanvas';
+import GradientCanvas, { RAPID_PREVIEW_MAX_DIMENSION, BLUR_SCRUB_PREVIEW_MAX_DIMENSION } from './GradientCanvas';
 import ShaderPreview from './ShaderPreview';
 import { exportBackground } from './exportBackground';
 import { 
@@ -479,7 +479,25 @@ const generateDifferentPalette = (count, vibrancy, previousColors, maxAttempts =
   return bestPalette;
 };
 
-function TakiSlider({ value, min = 0, max = 100, step = 1, onChange }) {
+function TakiSlider({ value, min = 0, max = 100, step = 1, onChange, onScrubStart, onScrubEnd }) {
+  const scrubbingRef = useRef(false);
+
+  const endScrub = useCallback(() => {
+    if (!scrubbingRef.current) return;
+    scrubbingRef.current = false;
+    window.removeEventListener('pointerup', endScrub);
+    window.removeEventListener('pointercancel', endScrub);
+    onScrubEnd?.();
+  }, [onScrubEnd]);
+
+  const startScrub = useCallback(() => {
+    if (scrubbingRef.current) return;
+    scrubbingRef.current = true;
+    window.addEventListener('pointerup', endScrub);
+    window.addEventListener('pointercancel', endScrub);
+    onScrubStart?.();
+  }, [onScrubStart, endScrub]);
+
   return (
     <div className="taki-slider-control">
       <SliderPrimitive.Root
@@ -496,7 +514,10 @@ function TakiSlider({ value, min = 0, max = 100, step = 1, onChange }) {
           }
         }}
       >
-        <SliderPrimitive.Control className="taki-slider-wrapper">
+        <SliderPrimitive.Control
+          className="taki-slider-wrapper"
+          onPointerDown={startScrub}
+        >
           <SliderPrimitive.Track className="taki-slider-track">
             <SliderPrimitive.Indicator className="taki-slider-indicator" />
           </SliderPrimitive.Track>
@@ -680,6 +701,8 @@ function App() {
   const [zoom, setZoom] = useState(1);
   const [showRing, setShowRing] = useState(false);
   const [isRapidRandomizing, setIsRapidRandomizing] = useState(false);
+  const [isBlurScrubbing, setIsBlurScrubbing] = useState(false);
+  const [isShaderHandoffPending, setIsShaderHandoffPending] = useState(false);
   const [renderGeneration, setRenderGeneration] = useState(0);
   
   const canvasRef = useRef(null);
@@ -819,8 +842,43 @@ function App() {
   const gradientFeedRafRef = useRef(null);
   const isRapidRandomizingRef = useRef(false);
   const renderGenerationRef = useRef(0);
+  const pendingShaderHandoffGenerationRef = useRef(0);
+  const activeShaderRef = useRef(activeShader);
   isRapidRandomizingRef.current = isRapidRandomizing;
   renderGenerationRef.current = renderGeneration;
+  activeShaderRef.current = activeShader;
+
+  const completeShaderHandoff = useCallback((generation) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (pendingShaderHandoffGenerationRef.current !== generation) return;
+        pendingShaderHandoffGenerationRef.current = 0;
+        setIsShaderHandoffPending(false);
+      });
+    });
+  }, []);
+
+  const handleBlurScrubStart = useCallback(() => {
+    pendingShaderHandoffGenerationRef.current = 0;
+    setIsShaderHandoffPending(false);
+    setIsBlurScrubbing(true);
+  }, []);
+
+  const handleBlurScrubEnd = useCallback(() => {
+    setIsBlurScrubbing(false);
+
+    renderGenerationRef.current += 1;
+    const generation = renderGenerationRef.current;
+    setRenderGeneration(generation);
+
+    if (activeShaderRef.current !== 'none') {
+      pendingShaderHandoffGenerationRef.current = generation;
+      setIsShaderHandoffPending(true);
+    }
+  }, []);
+
+  const canvasOnTop = isBlurScrubbing || isRapidRandomizing || isShaderHandoffPending;
+  const isInteractivePreview = isBlurScrubbing || isRapidRandomizing;
 
   const randomize = useCallback((fast = false, { enableRapid = true } = {}) => {
     if (gradientFeedRafRef.current) {
@@ -892,7 +950,11 @@ function App() {
     }
 
     setGradientDataUrl(dataUrl);
-  }, []);
+
+    if (generation === pendingShaderHandoffGenerationRef.current) {
+      completeShaderHandoff(generation);
+    }
+  }, [completeShaderHandoff]);
 
   const RAPID_RANDOMIZE_MS = 80;
   const RAPID_ACTIVATE_MS = 150;
@@ -1184,6 +1246,8 @@ function App() {
             value={blurStrength}
             min={0}
             max={100}
+            onScrubStart={handleBlurScrubStart}
+            onScrubEnd={handleBlurScrubEnd}
             onChange={(val) => {
               setBlurStrength(val);
               if (val > 0) {
@@ -1301,7 +1365,8 @@ function App() {
             <div
               className="canvas-absolute-center"
               style={{
-                visibility: activeShader === 'none' || isRapidRandomizing ? 'visible' : 'hidden',
+                visibility: activeShader === 'none' || canvasOnTop ? 'visible' : 'hidden',
+                zIndex: canvasOnTop ? 2 : 1,
                 pointerEvents: 'none',
               }}
             >
@@ -1319,16 +1384,22 @@ function App() {
                 zoom={zoom}
                 containerHeight={previewFitHeight}
                 showRing={showRing}
-                previewMaxDimension={isRapidRandomizing ? RAPID_PREVIEW_MAX_DIMENSION : null}
-                coalesceRenders={isRapidRandomizing}
-                captureForShader={activeShader !== 'none'}
+                previewMaxDimension={
+                  isBlurScrubbing
+                    ? BLUR_SCRUB_PREVIEW_MAX_DIMENSION
+                    : isRapidRandomizing
+                      ? RAPID_PREVIEW_MAX_DIMENSION
+                      : null
+                }
+                coalesceRenders={isInteractivePreview}
+                captureForShader={activeShader !== 'none' && !isBlurScrubbing}
                 renderGeneration={renderGeneration}
                 latestGenerationRef={renderGenerationRef}
               />
             </div>
 
-            {activeShader !== 'none' && !isRapidRandomizing && (
-              <div className="canvas-absolute-center">
+            {activeShader !== 'none' && (
+              <div className="canvas-absolute-center" style={{ zIndex: 1 }}>
                 <ShaderPreview 
                   ref={shaderRef}
                   shaderType={activeShader}
