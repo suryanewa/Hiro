@@ -68,7 +68,7 @@ const SHADER_OPTIONS = [
 ];
 
 const SHADER_PRESETS = {
-  'paper-texture': paperTexturePresets.filter(p => p.name !== 'Cardboard' && p.name !== 'Details'),
+  'paper-texture': paperTexturePresets.filter(p => p.name !== 'Cardboard' && p.name !== 'Details' && p.name !== 'Abstract'),
   'fluted-glass': flutedGlassPresets.filter(p => p.name !== 'Abstract' && p.name !== 'Folds'),
   'water': waterPresets.filter(p => p.name !== 'Slow-mo' && p.name !== 'Abstract'),
   'image-dithering': imageDitheringPresets.filter(p => p.name !== 'Default' && p.name !== 'Noise' && p.name !== 'Retro'),
