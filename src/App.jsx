@@ -80,6 +80,22 @@ const SHADER_PRESETS = {
   'halftone-cmyk': halftoneCmykPresets.filter(p => p.name !== 'Newspaper' && p.name !== 'Drops')
 };
 
+const pickRandomShaderSelection = () => {
+  const randomShader = SHADER_OPTIONS[Math.floor(Math.random() * SHADER_OPTIONS.length)].value;
+
+  if (randomShader === 'none') {
+    return { shader: 'none', preset: '' };
+  }
+
+  const presets = SHADER_PRESETS[randomShader];
+  if (presets && presets.length > 0) {
+    const randomPreset = presets[Math.floor(Math.random() * presets.length)];
+    return { shader: randomShader, preset: randomPreset.name };
+  }
+
+  return { shader: randomShader, preset: '' };
+};
+
 const rgbToHex = (r, g, b) => {
   const f = x => Math.round(x * 255).toString(16).padStart(2, '0');
   return `#${f(r)}${f(g)}${f(b)}`;
@@ -835,52 +851,26 @@ function App() {
     setBlurStrength(Math.floor(Math.random() * 26) + 50);
     setIsBlurred(true);
 
+    const randomVibrancy = VIBRANCY_OPTIONS[Math.floor(Math.random() * VIBRANCY_OPTIONS.length)].value;
+    const randomBlendMode = BLEND_MODES[Math.floor(Math.random() * BLEND_MODES.length)].value;
+    const { shader: randomShader, preset: randomPreset } = pickRandomShaderSelection();
+
+    setVibrancy(randomVibrancy);
+    setBlendMode(randomBlendMode);
+    setActiveShader(randomShader);
+    setActivePreset(randomPreset);
+
     if (fast) {
       setColors(() => generateRandomPalette(
         Math.floor(Math.random() * 5) + 2,
-        vibrancy,
+        randomVibrancy,
       ));
-
-      // Changing shader type remounts WebGL — only shuffle it occasionally while holding space.
-      if (Math.random() < 0.22) {
-        const shaderTypes = ['none', 'paper-texture', 'fluted-glass', 'water', 'image-dithering', 'halftone-dots', 'halftone-cmyk'];
-        const randomShader = shaderTypes[Math.floor(Math.random() * shaderTypes.length)];
-        setActiveShader(randomShader);
-
-        if (randomShader !== 'none') {
-          const presets = SHADER_PRESETS[randomShader];
-          if (presets && presets.length > 0) {
-            const randomPreset = presets[Math.floor(Math.random() * presets.length)];
-            setActivePreset(randomPreset.name);
-          }
-        } else {
-          setActivePreset('');
-        }
-      }
       return;
     }
 
-    const vibrancyOptions = ['subtle', 'normal', 'vibrant'];
-    const randomVibrancy = vibrancyOptions[Math.floor(Math.random() * vibrancyOptions.length)];
-    setVibrancy(randomVibrancy);
-
     const randomCount = Math.floor(Math.random() * 5) + 2;
     setColors((prevColors) => generateDifferentPalette(randomCount, randomVibrancy, prevColors));
-
-    const shaderTypes = ['none', 'paper-texture', 'fluted-glass', 'water', 'image-dithering', 'halftone-dots', 'halftone-cmyk'];
-    const randomShader = shaderTypes[Math.floor(Math.random() * shaderTypes.length)];
-    setActiveShader(randomShader);
-
-    if (randomShader !== 'none') {
-      const presets = SHADER_PRESETS[randomShader];
-      if (presets && presets.length > 0) {
-        const randomPreset = presets[Math.floor(Math.random() * presets.length)];
-        setActivePreset(randomPreset.name);
-      }
-    } else {
-      setActivePreset('');
-    }
-  }, [vibrancy]);
+  }, []);
 
   const randomizeRef = useRef(randomize);
   randomizeRef.current = randomize;
