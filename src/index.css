@@ -526,8 +526,15 @@ body {
   display: flex;
   min-width: 100%;
   min-height: 100%;
-  padding: 48px;
   box-sizing: border-box;
+}
+
+.canvas-scroll-padding-container {
+  padding: 48px;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .preview-scroll-container::-webkit-scrollbar {
