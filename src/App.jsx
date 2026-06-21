@@ -24,454 +24,50 @@ import GradientCanvas, { RAPID_PREVIEW_MAX_DIMENSION, BLUR_SCRUB_PREVIEW_MAX_DIM
 import HiroLogoMark from './HiroLogoMark';
 import ShaderPreview from './ShaderPreview';
 import { exportBackground } from './exportBackground';
-import { 
-  paperTexturePresets, 
-  flutedGlassPresets, 
-  waterPresets, 
-  imageDitheringPresets, 
-  halftoneDotsPresets, 
-  halftoneCmykPresets 
-} from '@paper-design/shaders-react';
-import { rybHsl2rgb } from 'rybitten';
-import { generateRandomColorRamp } from 'fettepalette';
-import { generateColorRampWithCurve } from 'rampensau';
-import { Poline, positionFunctions, randomHSLPair } from 'poline';
+import {
+  BLEND_MODES,
+  DEFAULT_COLORS,
+  RATIOS,
+  SHADER_OPTIONS,
+  SHADER_PRESETS,
+  VIBRANCY_OPTIONS,
+  createRandomGradientConfig,
+  generateDifferentPalette,
+} from './api/index.js';
 
-const DEFAULT_COLORS = ['#0f172a', '#3b82f6', '#8b5cf6', '#000000'];
-
-const RATIOS = [
-  { label: '16:9', width: 1920, height: 1080, icon: Monitor },
-  { label: '1:1', width: 1080, height: 1080, icon: Square },
-  { label: '9:16', width: 1080, height: 1920, icon: Smartphone },
-  { label: 'Web', width: 1440, height: 900, icon: Layout },
-];
-
-const BLEND_MODES = [
-  { label: 'Normal', value: 'source-over' },
-  { label: 'Dynamic (Mix)', value: 'dynamic' },
-  { label: 'Screen (Glowing)', value: 'screen' },
-  { label: 'Multiply (Deep)', value: 'multiply' },
-  { label: 'Overlay (Contrast)', value: 'overlay' },
-  { label: 'Color Dodge (Vibrant)', value: 'color-dodge' },
-  { label: 'Exclusion (Experimental)', value: 'exclusion' },
-];
-
-const VIBRANCY_OPTIONS = [
-  { label: 'Subtle', value: 'subtle' },
-  { label: 'Normal', value: 'normal' },
-  { label: 'Vibrant', value: 'vibrant' }
-];
-
-const SHADER_OPTIONS = [
-  { label: 'None', value: 'none' },
-  { label: 'Paper Texture', value: 'paper-texture' },
-  { label: 'Fluted Glass', value: 'fluted-glass' },
-  { label: 'Water', value: 'water' },
-  { label: 'Image Dithering', value: 'image-dithering' },
-  { label: 'Halftone Dots', value: 'halftone-dots' },
-  { label: 'Halftone CMYK', value: 'halftone-cmyk' }
-];
-
-const SHADER_PRESETS = {
-  'paper-texture': paperTexturePresets.filter(p => p.name !== 'Cardboard' && p.name !== 'Details' && p.name !== 'Abstract'),
-  'fluted-glass': flutedGlassPresets.filter(p => p.name !== 'Abstract' && p.name !== 'Folds'),
-  'water': waterPresets.filter(p => p.name !== 'Slow-mo' && p.name !== 'Abstract'),
-  'image-dithering': imageDitheringPresets.filter(p => p.name !== 'Default' && p.name !== 'Noise' && p.name !== 'Retro'),
-  'halftone-dots': halftoneDotsPresets.filter(p => p.name !== 'Default' && p.name !== 'LED screen' && p.name !== 'Round and square'),
-  'halftone-cmyk': halftoneCmykPresets.filter(p => p.name !== 'Newspaper' && p.name !== 'Drops')
+const RATIO_ICONS = {
+  '16:9': Monitor,
+  '1:1': Square,
+  '9:16': Smartphone,
+  Web: Layout,
 };
 
-const pickRandomShaderSelection = () => {
-  const randomShader = SHADER_OPTIONS[Math.floor(Math.random() * SHADER_OPTIONS.length)].value;
+const RATIOS_WITH_ICONS = RATIOS.map((ratio) => ({
+  ...ratio,
+  icon: RATIO_ICONS[ratio.label] ?? Layout,
+}));
 
-  if (randomShader === 'none') {
-    return { shader: 'none', preset: '' };
+const SPACE_SHORTCUT_INTERACTIVE_ROLES = new Set([
+  'button',
+  'switch',
+  'slider',
+  'combobox',
+  'menuitem',
+  'option',
+  'textbox',
+]);
+
+const isSpaceShortcutTarget = (target) => {
+  if (!target || typeof target.closest !== 'function') {
+    return false;
   }
 
-  const presets = SHADER_PRESETS[randomShader];
-  if (presets && presets.length > 0) {
-    const randomPreset = presets[Math.floor(Math.random() * presets.length)];
-    return { shader: randomShader, preset: randomPreset.name };
+  if (target.closest('input, textarea, select, button, a[href], [contenteditable="true"]')) {
+    return true;
   }
 
-  return { shader: randomShader, preset: '' };
-};
-
-const rgbToHex = (r, g, b) => {
-  const f = x => Math.round(x * 255).toString(16).padStart(2, '0');
-  return `#${f(r)}${f(g)}${f(b)}`;
-};
-
-const generateHarmonicPalette = (count, vibrancy = 'vibrant') => {
-  const baseHue = Math.floor(Math.random() * 360);
-  const baseSat = 65 + Math.floor(Math.random() * 25); // 65-90% base saturation
-  const baseLight = 40 + Math.floor(Math.random() * 25); // 40-65% base lightness
-  
-  const newColors = [];
-  
-  let scheme;
-  if (vibrancy === 'subtle') {
-    // Monochromatic or very close Analogous
-    scheme = Math.random() > 0.5 ? 'mono' : 'close-analogous';
-  } else if (vibrancy === 'normal') {
-    const schemes = ['analogous', 'triadic', 'split', 'mono'];
-    scheme = schemes[Math.floor(Math.random() * schemes.length)];
-  } else {
-    // Vibrant gets high-contrast schemes
-    const schemes = ['triadic', 'split', 'complementary'];
-    scheme = schemes[Math.floor(Math.random() * schemes.length)];
-  }
-
-  for (let i = 0; i < count; i++) {
-    let h, s, l;
-
-    if (vibrancy === 'subtle') {
-      if (scheme === 'mono') {
-        h = (baseHue + (Math.random() * 6 - 3)) % 360;
-        s = Math.max(30, Math.min(100, baseSat + (Math.random() * 8 - 4)));
-        l = Math.max(20, Math.min(90, baseLight + (i * 6 - (count * 3))));
-      } else {
-        h = (baseHue + (i * (6 + Math.random() * 6))) % 360; // 6-12 degree shift per color
-        s = Math.max(30, Math.min(100, baseSat + (Math.random() * 8 - 4)));
-        l = Math.max(20, Math.min(90, baseLight + (Math.random() * 8 - 4)));
-      }
-    } else if (vibrancy === 'normal') {
-      s = 50 + Math.random() * 35; // 50-85%
-      l = 40 + Math.random() * 30; // 40-70%
-      
-      if (scheme === 'mono') {
-        h = (baseHue + (Math.random() * 12 - 6)) % 360;
-        s = Math.max(30, s - (i * 4));
-        l = Math.max(25, Math.min(85, l + (i * 8) - 12));
-      } else if (scheme === 'analogous') {
-        h = (baseHue + (i * 25) + (Math.random() * 10 - 5)) % 360;
-      } else if (scheme === 'triadic') {
-        h = (baseHue + (i * 120)) % 360;
-        if (i >= 3) h = (h + 30) % 360;
-      } else {
-        if (i === 0) h = baseHue;
-        else if (i % 2 === 1) h = (baseHue + 150) % 360;
-        else h = (baseHue + 210) % 360;
-      }
-
-      if (i === count - 1 && Math.random() > 0.5) {
-         l = Math.random() > 0.5 ? 20 + Math.random() * 10 : 80 + Math.random() * 10;
-      }
-    } else {
-      s = 85 + Math.random() * 15; // 85-100%
-      l = 35 + Math.random() * 25; // 35-60%
-      
-      if (scheme === 'complementary') {
-        h = (i % 2 === 0) ? baseHue : (baseHue + 180) % 360;
-        h = (h + (Math.random() * 16 - 8)) % 360;
-      } else if (scheme === 'triadic') {
-        h = (baseHue + (i * 120) + (Math.random() * 10 - 5)) % 360;
-      } else {
-        if (i === 0) h = baseHue;
-        else if (i % 2 === 1) h = (baseHue + 140) % 360;
-        else h = (baseHue + 220) % 360;
-        h = (h + (Math.random() * 20 - 10)) % 360;
-      }
-      
-      // Dynamic contrast for vibrant
-      if (i % 2 === 1) {
-        l = Math.max(15, l - 15);
-      } else {
-        l = Math.min(85, l + 15);
-      }
-      
-      if (i === count - 1) {
-         l = Math.random() > 0.5 ? 10 + Math.random() * 10 : 90 + Math.random() * 8;
-         s = 90 + Math.random() * 10;
-      }
-    }
-    
-    if (h < 0) h += 360;
-    const rgb = rybHsl2rgb([h, s / 100, l / 100]);
-    newColors.push(rgbToHex(rgb[0], rgb[1], rgb[2]));
-  }
-  return newColors;
-};
-
-const shuffleArray = (array) => {
-  const newArr = [...array];
-  for (let i = newArr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
-  }
-  return newArr;
-};
-
-const generateFarbveloPalette = (count, vibrancy = 'vibrant') => {
-  const baseHue = Math.floor(Math.random() * 360);
-  const minHueDiffAngle = Math.floor(Math.random() * (360 / count)) + 10;
-  const numHues = Math.max(count, Math.round(360 / minHueDiffAngle));
-  const hues = Array.from({ length: numHues }, (_, i) => (baseHue + i * minHueDiffAngle) % 360);
-  
-  let minSat, maxSat, baseSaturation;
-  if (vibrancy === 'subtle') {
-    baseSaturation = 10 + Math.random() * 20;
-    minSat = 20 + Math.random() * 20;
-    maxSat = minSat + 20;
-  } else if (vibrancy === 'normal') {
-    baseSaturation = 20 + Math.random() * 30;
-    minSat = 40 + Math.random() * 20;
-    maxSat = minSat + 30;
-  } else { // vibrant
-    baseSaturation = 30 + Math.random() * 40;
-    minSat = 60 + Math.random() * 20;
-    maxSat = Math.min(100, minSat + 30);
-  }
-
-  const baseLightness = Math.random() * (vibrancy === 'subtle' ? 40 : 20);
-  const rangeLightness = 90 - baseLightness;
-
-  const colorHues = [];
-  const colorSaturations = [];
-  const colorLightnesses = [];
-
-  colorHues.push(hues[0]);
-  colorSaturations.push(baseSaturation);
-  colorLightnesses.push(baseLightness + Math.random() * 10);
-
-  const remainingHues = [...hues];
-  remainingHues.splice(0, 1);
-
-  for (let i = 0; i < count - 2; i++) {
-    const hueIdx = Math.floor(Math.random() * remainingHues.length);
-    const hue = remainingHues.splice(hueIdx, 1)[0] ?? hues[Math.floor(Math.random() * hues.length)];
-    const saturation = minSat + Math.random() * (maxSat - minSat);
-    const light = baseLightness + 15 + ((rangeLightness - 15) / Math.max(1, count - 2)) * i + Math.random() * 10;
-    
-    colorHues.push(hue);
-    colorSaturations.push(saturation);
-    colorLightnesses.push(Math.min(95, light));
-  }
-
-  if (count > 1) {
-    colorHues.push(remainingHues[0] ?? hues[0]);
-    colorSaturations.push(baseSaturation);
-    colorLightnesses.push(rangeLightness + Math.random() * 10);
-  }
-
-  const arrangement = Math.random() > 0.5 ? 'lightCenter' : 'default';
-  if (arrangement === 'lightCenter' && count > 2) {
-    const sortedLightnesses = [...colorLightnesses].sort((a, b) => a - b);
-    const centerIndex = Math.floor(sortedLightnesses.length / 2);
-    const reordered = new Array(sortedLightnesses.length);
-    reordered[centerIndex] = sortedLightnesses[sortedLightnesses.length - 1];
-    let leftIndex = centerIndex - 1;
-    let rightIndex = centerIndex + 1;
-    for (let i = sortedLightnesses.length - 2; i >= 0; i--) {
-      if (leftIndex >= 0) {
-        reordered[leftIndex] = sortedLightnesses[i];
-        leftIndex--;
-        i--;
-      }
-      if (i >= 0 && rightIndex < sortedLightnesses.length) {
-        reordered[rightIndex] = sortedLightnesses[i];
-        rightIndex++;
-      }
-    }
-    colorLightnesses.splice(0, colorLightnesses.length, ...reordered);
-  }
-
-  const newColors = [];
-  for (let i = 0; i < count; i++) {
-    const rgb = rybHsl2rgb([colorHues[i], colorSaturations[i] / 100, colorLightnesses[i] / 100]);
-    newColors.push(rgbToHex(rgb[0], rgb[1], rgb[2]));
-  }
-  
-  return shuffleArray(newColors);
-};
-
-const generateFettePalette = (count, vibrancy = 'vibrant') => {
-  const centerHue = Math.random() * 360;
-  const hueCycle = vibrancy === 'subtle' ? 0.05 + Math.random() * 0.1 :
-                   vibrancy === 'normal' ? 0.3 + Math.random() * 0.4 :
-                                          0.6  + Math.random() * 0.8;
-
-  const curveAccent = vibrancy === 'subtle' ? 0 :
-                      vibrancy === 'normal' ? Math.random() * 0.15 :
-                                             Math.random() * 0.3;
-
-  const minSaturationLight = vibrancy === 'subtle'
-    ? [0.1, 0.4]
-    : vibrancy === 'normal'
-    ? [0.4, 0.2]
-    : [0.7, 0.05];
-
-  const maxSaturationLight = vibrancy === 'subtle'
-    ? [0.4, 0.8]
-    : vibrancy === 'normal'
-    ? [0.8, 0.85]
-    : [1.0, 0.95];
-
-  const curveMethods = ['lamé', 'arc', 'pow', 'powY', 'powX'];
-  const curveMethod = curveMethods[Math.floor(Math.random() * curveMethods.length)];
-
-  const ramp = generateRandomColorRamp({
-    total: count,
-    centerHue,
-    hueCycle,
-    curveAccent,
-    curveMethod,
-    minSaturationLight,
-    maxSaturationLight,
-    colorModel: 'hsl',
-  });
-
-  // base colors are the mid-tones – closest to what the existing generators produce
-  const baseHSL = ramp.base.slice(0, count);
-
-  return shuffleArray(baseHSL).map(([h, s, l]) => {
-    // fettepalette returns HSL with s and l as 0–1 fractions
-    const rgb = rybHsl2rgb([h, s, l]);
-    return rgbToHex(rgb[0], rgb[1], rgb[2]);
-  });
-};
-
-const generateRampensauPalette = (count, vibrancy = 'vibrant') => {
-  const hStart = Math.random() * 360;
-  // hCycles: how much the hue rotates across the ramp
-  const hCycles = vibrancy === 'subtle' ? (Math.random() * 0.3) - 0.15 :
-                  vibrancy === 'normal' ? (Math.random() * 0.8) - 0.4 :
-                                         (Math.random() * 1.5) + 0.5;
-
-  // sRange: [minSat, maxSat] as 0–1 fractions
-  const sRange = vibrancy === 'subtle'
-    ? [0.15 + Math.random() * 0.15, 0.3 + Math.random() * 0.15]
-    : vibrancy === 'normal'
-    ? [0.4 + Math.random() * 0.2, 0.7 + Math.random() * 0.2]
-    : [0.7 + Math.random() * 0.2, 0.95 + Math.random() * 0.05];
-
-  // lRange: [minLight, maxLight] spanning dark→light across the ramp
-  const lRange = vibrancy === 'subtle'
-    ? [0.35 + Math.random() * 0.15, 0.7 + Math.random() * 0.15]
-    : vibrancy === 'normal'
-    ? [0.15 + Math.random() * 0.2, 0.8 + Math.random() * 0.15]
-    : [0.05 + Math.random() * 0.1, 0.95 + Math.random() * 0.05];
-
-  const curveMethods = ['lamé', 'arc', 'pow', 'powY', 'powX'];
-  const curveMethod = curveMethods[Math.floor(Math.random() * curveMethods.length)];
-  const curveAccent = 0.1 + Math.random() * 1.5;
-
-  const ramp = generateColorRampWithCurve({
-    total: count,
-    hStart,
-    hCycles,
-    sRange,
-    lRange,
-    curveMethod,
-    curveAccent,
-  });
-
-  return shuffleArray(ramp).map(([h, s, l]) => {
-    const rgb = rybHsl2rgb([h, s, l]);
-    return rgbToHex(rgb[0], rgb[1], rgb[2]);
-  });
-};
-
-const generatePolinePalette = (count, vibrancy = 'vibrant') => {
-  let saturations, lightnesses;
-  if (vibrancy === 'subtle') {
-    saturations = [0.15 + Math.random() * 0.15, 0.3 + Math.random() * 0.15];
-    lightnesses = [0.35 + Math.random() * 0.15, 0.7 + Math.random() * 0.15];
-  } else if (vibrancy === 'normal') {
-    saturations = [0.3 + Math.random() * 0.2, 0.55 + Math.random() * 0.2];
-    lightnesses = [0.15 + Math.random() * 0.2, 0.8 + Math.random() * 0.15];
-  } else {
-    saturations = [0.55 + Math.random() * 0.2, 0.85 + Math.random() * 0.15];
-    lightnesses = [0.05 + Math.random() * 0.15, 0.9 + Math.random() * 0.08];
-  }
-
-  const startHue = Math.random() * 360;
-  
-  let anchorColors;
-  if (vibrancy === 'vibrant') {
-    const h1 = startHue;
-    const h2 = (startHue + 120 + Math.random() * 120) % 360;
-    anchorColors = [
-      [h1, saturations[0] + Math.random() * (saturations[1] - saturations[0]), lightnesses[0] + Math.random() * (lightnesses[1] - lightnesses[0])],
-      [h2, saturations[0] + Math.random() * (saturations[1] - saturations[0]), lightnesses[0] + Math.random() * (lightnesses[1] - lightnesses[0])]
-    ];
-  } else {
-    anchorColors = randomHSLPair(startHue, saturations, lightnesses);
-  }
-
-  const funcs = Object.values(positionFunctions);
-  const positionFunction = funcs[Math.floor(Math.random() * funcs.length)];
-
-  const poline = new Poline({
-    anchorColors,
-    numPoints: Math.max(0, count - 2),
-    positionFunction,
-  });
-
-  return shuffleArray(poline.colors.slice(0, count)).map(([h, s, l]) => {
-    const rgb = rybHsl2rgb([h, s, l]);
-    return rgbToHex(rgb[0], rgb[1], rgb[2]);
-  });
-};
-
-const generateRandomPalette = (count, vibrancy = 'vibrant') => {
-  const r = Math.random();
-  if (r < 0.2) return generateHarmonicPalette(count, vibrancy);
-  if (r < 0.4) return generateFarbveloPalette(count, vibrancy);
-  if (r < 0.6) return generateFettePalette(count, vibrancy);
-  if (r < 0.8) return generateRampensauPalette(count, vibrancy);
-  return generatePolinePalette(count, vibrancy);
-};
-
-const hexToRgbVals = (hex) => {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16)
-  } : { r: 0, g: 0, b: 0 };
-};
-
-const calculatePaletteDistance = (pal1, pal2) => {
-  const rgb1 = pal1.map(hexToRgbVals);
-  const rgb2 = pal2.map(hexToRgbVals);
-  
-  const distDirection = (a, b) => {
-    let totalDist = 0;
-    a.forEach(c1 => {
-      let minDist = Infinity;
-      b.forEach(c2 => {
-        const d = Math.sqrt(Math.pow(c1.r - c2.r, 2) + Math.pow(c1.g - c2.g, 2) + Math.pow(c1.b - c2.b, 2));
-        if (d < minDist) minDist = d;
-      });
-      totalDist += minDist;
-    });
-    return totalDist / a.length;
-  };
-  
-  return (distDirection(rgb1, rgb2) + distDirection(rgb2, rgb1)) / 2;
-};
-
-const generateDifferentPalette = (count, vibrancy, previousColors, maxAttempts = 6) => {
-  if (!previousColors || previousColors.length === 0) return generateRandomPalette(count, vibrancy);
-
-  let bestPalette = generateRandomPalette(count, vibrancy);
-  let maxDistance = -1;
-
-  for (let i = 0; i < maxAttempts; i++) {
-    const candidate = generateRandomPalette(count, vibrancy);
-    const distance = calculatePaletteDistance(candidate, previousColors);
-    
-    // 130 is a very high distance in RGB space, meaning practically opposite colors
-    if (distance > 130) {
-      return candidate;
-    }
-    if (distance > maxDistance) {
-      maxDistance = distance;
-      bestPalette = candidate;
-    }
-  }
-  return bestPalette;
+  const role = target.closest('[role]')?.getAttribute('role')?.toLowerCase();
+  return role ? role.split(/\s+/).some((roleName) => SPACE_SHORTCUT_INTERACTIVE_ROLES.has(roleName)) : false;
 };
 
 function TakiSlider({ value, min = 0, max = 100, step = 1, onChange, onScrubStart, onScrubEnd }) {
@@ -670,7 +266,7 @@ function AnimatedSelect({ label, value, options, onChange }) {
 }
 function App() {
   const [colors, setColors] = useState([...DEFAULT_COLORS]);
-  const [activeRatio, setActiveRatio] = useState(RATIOS[0]);
+  const [activeRatio, setActiveRatio] = useState(RATIOS_WITH_ICONS[0]);
   const [seed, setSeed] = useState(Math.random());
   const [isBlurred, setIsBlurred] = useState(true);
   const [blurStrength, setBlurStrength] = useState(100);
@@ -767,7 +363,9 @@ function App() {
   const isRapidRandomizingRef = useRef(false);
   const renderGenerationRef = useRef(0);
   const pendingShaderHandoffGenerationRef = useRef(0);
+  const colorsRef = useRef(colors);
   const activeShaderRef = useRef(activeShader);
+  colorsRef.current = colors;
   isRapidRandomizingRef.current = isRapidRandomizing;
   renderGenerationRef.current = renderGeneration;
   activeShaderRef.current = activeShader;
@@ -829,29 +427,21 @@ function App() {
       }
     }
 
-    setSeed(Math.random());
-    setBlurStrength(Math.floor(Math.random() * 26) + 50);
-    setIsBlurred(true);
-
     const randomVibrancy = VIBRANCY_OPTIONS[Math.floor(Math.random() * VIBRANCY_OPTIONS.length)].value;
-    const randomBlendMode = BLEND_MODES[Math.floor(Math.random() * BLEND_MODES.length)].value;
-    const { shader: randomShader, preset: randomPreset } = pickRandomShaderSelection();
+    const prevColors = fast ? undefined : colorsRef.current;
+    const nextConfig = createRandomGradientConfig({
+      vibrancy: randomVibrancy,
+      previousColors: prevColors,
+    });
 
+    setColors(nextConfig.colors);
+    setSeed(nextConfig.seed);
+    setBlurStrength(nextConfig.blurStrength);
+    setIsBlurred(nextConfig.isBlurred);
     setVibrancy(randomVibrancy);
-    setBlendMode(randomBlendMode);
-    setActiveShader(randomShader);
-    setActivePreset(randomPreset);
-
-    if (fast) {
-      setColors(() => generateRandomPalette(
-        Math.floor(Math.random() * 5) + 2,
-        randomVibrancy,
-      ));
-      return;
-    }
-
-    const randomCount = Math.floor(Math.random() * 5) + 2;
-    setColors((prevColors) => generateDifferentPalette(randomCount, randomVibrancy, prevColors));
+    setBlendMode(nextConfig.blendMode);
+    setActiveShader(nextConfig.activeShader);
+    setActivePreset(nextConfig.activePreset);
   }, []);
 
   const randomizeRef = useRef(randomize);
@@ -885,7 +475,7 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+      if (e.code === 'Space' && !isSpaceShortcutTarget(e.target)) {
         e.preventDefault();
         if (e.repeat || isSpaceHeldRef.current) return;
 
@@ -1252,7 +842,7 @@ function App() {
           <div className="control-group">
             <label className="control-label">Aspect Ratio</label>
             <div className="aspect-ratios" onMouseLeave={() => setHoveredRatio(null)}>
-              {RATIOS.map((ratio) => {
+              {RATIOS_WITH_ICONS.map((ratio) => {
                 const Icon = ratio.icon;
                 const isHighlighted = ratio.label === highlightedRatio;
                 return (
