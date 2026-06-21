@@ -172,6 +172,101 @@ const generateHarmonicPalette = (count, vibrancy = 'vibrant') => {
   return newColors;
 };
 
+const generateFarbveloPalette = (count, vibrancy = 'vibrant') => {
+  const baseHue = Math.floor(Math.random() * 360);
+  const minHueDiffAngle = Math.floor(Math.random() * (360 / count)) + 10;
+  const numHues = Math.max(count, Math.round(360 / minHueDiffAngle));
+  const hues = Array.from({ length: numHues }, (_, i) => (baseHue + i * minHueDiffAngle) % 360);
+  
+  let minSat, maxSat, minLight, maxLight, baseSaturation;
+  if (vibrancy === 'subtle') {
+    baseSaturation = 10 + Math.random() * 20;
+    minSat = 20 + Math.random() * 20;
+    maxSat = minSat + 20;
+    minLight = 50 + Math.random() * 20;
+    maxLight = minLight + 20;
+  } else if (vibrancy === 'normal') {
+    baseSaturation = 20 + Math.random() * 30;
+    minSat = 40 + Math.random() * 20;
+    maxSat = minSat + 30;
+    minLight = 30 + Math.random() * 20;
+    maxLight = minLight + 40;
+  } else { // vibrant
+    baseSaturation = 30 + Math.random() * 40;
+    minSat = 60 + Math.random() * 20;
+    maxSat = Math.min(100, minSat + 30);
+    minLight = 20 + Math.random() * 20;
+    maxLight = Math.min(95, minLight + 50);
+  }
+
+  const baseLightness = Math.random() * (vibrancy === 'subtle' ? 40 : 20);
+  const rangeLightness = 90 - baseLightness;
+
+  const colorHues = [];
+  const colorSaturations = [];
+  const colorLightnesses = [];
+
+  colorHues.push(hues[0]);
+  colorSaturations.push(baseSaturation);
+  colorLightnesses.push(baseLightness + Math.random() * 10);
+
+  const remainingHues = [...hues];
+  remainingHues.splice(0, 1);
+
+  for (let i = 0; i < count - 2; i++) {
+    const hueIdx = Math.floor(Math.random() * remainingHues.length);
+    const hue = remainingHues.splice(hueIdx, 1)[0] ?? hues[Math.floor(Math.random() * hues.length)];
+    const saturation = minSat + Math.random() * (maxSat - minSat);
+    const light = baseLightness + 15 + ((rangeLightness - 15) / Math.max(1, count - 2)) * i + Math.random() * 10;
+    
+    colorHues.push(hue);
+    colorSaturations.push(saturation);
+    colorLightnesses.push(Math.min(95, light));
+  }
+
+  if (count > 1) {
+    colorHues.push(remainingHues[0] ?? hues[0]);
+    colorSaturations.push(baseSaturation);
+    colorLightnesses.push(rangeLightness + Math.random() * 10);
+  }
+
+  const arrangement = Math.random() > 0.5 ? 'lightCenter' : 'default';
+  if (arrangement === 'lightCenter' && count > 2) {
+    const sortedLightnesses = [...colorLightnesses].sort((a, b) => a - b);
+    const centerIndex = Math.floor(sortedLightnesses.length / 2);
+    const reordered = new Array(sortedLightnesses.length);
+    reordered[centerIndex] = sortedLightnesses[sortedLightnesses.length - 1];
+    let leftIndex = centerIndex - 1;
+    let rightIndex = centerIndex + 1;
+    for (let i = sortedLightnesses.length - 2; i >= 0; i--) {
+      if (leftIndex >= 0) {
+        reordered[leftIndex] = sortedLightnesses[i];
+        leftIndex--;
+        i--;
+      }
+      if (i >= 0 && rightIndex < sortedLightnesses.length) {
+        reordered[rightIndex] = sortedLightnesses[i];
+        rightIndex++;
+      }
+    }
+    colorLightnesses.splice(0, colorLightnesses.length, ...reordered);
+  }
+
+  const newColors = [];
+  for (let i = 0; i < count; i++) {
+    const rgb = rybHsl2rgb([colorHues[i], colorSaturations[i] / 100, colorLightnesses[i] / 100]);
+    newColors.push(rgbToHex(rgb[0], rgb[1], rgb[2]));
+  }
+  
+  return newColors;
+};
+
+const generateRandomPalette = (count, vibrancy = 'vibrant') => {
+  return Math.random() > 0.5 
+    ? generateHarmonicPalette(count, vibrancy) 
+    : generateFarbveloPalette(count, vibrancy);
+};
+
 function TakiSlider({ value, min = 0, max = 100, step = 1, onChange }) {
   return (
     <div className="taki-slider-control">
@@ -495,7 +590,7 @@ function App() {
   const randomizePalette = () => {
     const randomVibrancy = ['vibrant', 'pastel', 'monochrome', 'neon'][Math.floor(Math.random() * 4)];
     const randomCount = Math.floor(Math.random() * 5) + 2; // Between 2 and 6 colors
-    setColors(generateHarmonicPalette(randomCount, randomVibrancy));
+    setColors(generateRandomPalette(randomCount, randomVibrancy));
   };
 
   const randomize = () => {
@@ -506,7 +601,7 @@ function App() {
     setVibrancy(randomVibrancy);
 
     const randomCount = Math.floor(Math.random() * 5) + 2; // Between 2 and 6 colors
-    setColors(generateHarmonicPalette(randomCount, randomVibrancy));
+    setColors(generateRandomPalette(randomCount, randomVibrancy));
 
     // Randomize blur strength between 50 and 75, and ensure blur is enabled
     setBlurStrength(Math.floor(Math.random() * 26) + 50);
@@ -755,7 +850,7 @@ function App() {
           options={VIBRANCY_OPTIONS}
           onChange={(val) => {
             setVibrancy(val);
-            setColors(prevColors => generateHarmonicPalette(prevColors.length, val));
+            setColors(prevColors => generateRandomPalette(prevColors.length, val));
           }}
         />
 
