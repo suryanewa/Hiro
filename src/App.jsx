@@ -424,16 +424,20 @@ const calculatePaletteDistance = (pal1, pal2) => {
   const rgb1 = pal1.map(hexToRgbVals);
   const rgb2 = pal2.map(hexToRgbVals);
   
-  let totalDist = 0;
-  rgb1.forEach(c1 => {
-    let minDist = Infinity;
-    rgb2.forEach(c2 => {
-      const d = Math.sqrt(Math.pow(c1.r - c2.r, 2) + Math.pow(c1.g - c2.g, 2) + Math.pow(c1.b - c2.b, 2));
-      if (d < minDist) minDist = d;
+  const distDirection = (a, b) => {
+    let totalDist = 0;
+    a.forEach(c1 => {
+      let minDist = Infinity;
+      b.forEach(c2 => {
+        const d = Math.sqrt(Math.pow(c1.r - c2.r, 2) + Math.pow(c1.g - c2.g, 2) + Math.pow(c1.b - c2.b, 2));
+        if (d < minDist) minDist = d;
+      });
+      totalDist += minDist;
     });
-    totalDist += minDist;
-  });
-  return totalDist / rgb1.length;
+    return totalDist / a.length;
+  };
+  
+  return (distDirection(rgb1, rgb2) + distDirection(rgb2, rgb1)) / 2;
 };
 
 const generateDifferentPalette = (count, vibrancy, previousColors) => {
@@ -442,10 +446,13 @@ const generateDifferentPalette = (count, vibrancy, previousColors) => {
   let bestPalette = generateRandomPalette(count, vibrancy);
   let maxDistance = -1;
 
-  for (let i = 0; i < 5; i++) {
+  // Generate many candidates to guarantee we find a highly distinct palette
+  for (let i = 0; i < 20; i++) {
     const candidate = generateRandomPalette(count, vibrancy);
     const distance = calculatePaletteDistance(candidate, previousColors);
-    if (distance > 70) {
+    
+    // 130 is a very high distance in RGB space, meaning practically opposite colors
+    if (distance > 130) {
       return candidate;
     }
     if (distance > maxDistance) {
