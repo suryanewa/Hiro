@@ -786,7 +786,7 @@ function App() {
   const randomizePalette = () => {
     const randomVibrancy = ['vibrant', 'pastel', 'monochrome', 'neon'][Math.floor(Math.random() * 4)];
     const randomCount = Math.floor(Math.random() * 5) + 2; // Between 2 and 6 colors
-    setColors(generateDifferentPalette(randomCount, randomVibrancy, colors));
+    setColors(prevColors => generateDifferentPalette(randomCount, randomVibrancy, prevColors));
   };
 
   const randomize = () => {
@@ -797,7 +797,7 @@ function App() {
     setVibrancy(randomVibrancy);
 
     const randomCount = Math.floor(Math.random() * 5) + 2; // Between 2 and 6 colors
-    setColors(generateDifferentPalette(randomCount, randomVibrancy, colors));
+    setColors(prevColors => generateDifferentPalette(randomCount, randomVibrancy, prevColors));
 
     // Randomize blur strength between 50 and 75, and ensure blur is enabled
     setBlurStrength(Math.floor(Math.random() * 26) + 50);
