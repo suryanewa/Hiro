@@ -747,36 +747,38 @@ function App() {
       {/* Main Canvas Area */}
       <div className="main-content">
         <div className="preview-scroll-container" ref={containerRef}>
-          <div style={{ display: activeShader === 'none' ? 'block' : 'none' }}>
-            <GradientCanvas 
-              ref={canvasRef}
-              colors={colors}
-              width={activeRatio.width}
-              height={activeRatio.height}
-              seed={seed}
-              glassIntensity={0}
-              isBlurred={isBlurred}
-              blurStrength={blurStrength}
-              blendMode={blendMode}
-              onRender={setGradientDataUrl}
-              zoom={zoom}
-              containerHeight={containerHeight}
-              showRing={showRing}
-            />
-          </div>
+          <div className="preview-content-wrapper">
+            <div style={{ display: activeShader === 'none' ? 'flex' : 'none', margin: 'auto' }}>
+              <GradientCanvas 
+                ref={canvasRef}
+                colors={colors}
+                width={activeRatio.width}
+                height={activeRatio.height}
+                seed={seed}
+                glassIntensity={0}
+                isBlurred={isBlurred}
+                blurStrength={blurStrength}
+                blendMode={blendMode}
+                onRender={setGradientDataUrl}
+                zoom={zoom}
+                containerHeight={containerHeight}
+                showRing={showRing}
+              />
+            </div>
 
-          {activeShader !== 'none' && (
-            <ShaderPreview 
-              ref={shaderRef}
-              shaderType={activeShader}
-              presetName={activePreset}
-              imageUrl={gradientDataUrl}
-              width={activeRatio.width}
-              height={activeRatio.height}
-              zoom={zoom}
-              containerHeight={containerHeight}
-            />
-          )}
+            {activeShader !== 'none' && (
+              <ShaderPreview 
+                ref={shaderRef}
+                shaderType={activeShader}
+                presetName={activePreset}
+                imageUrl={gradientDataUrl}
+                width={activeRatio.width}
+                height={activeRatio.height}
+                zoom={zoom}
+                containerHeight={containerHeight}
+              />
+            )}
+          </div>
         </div>
 
 
