@@ -31,6 +31,7 @@ import {
   halftoneCmykPresets 
 } from '@paper-design/shaders-react';
 import { rybHsl2rgb } from 'rybitten';
+import { generateRandomColorRamp } from 'fettepalette';
 
 const DEFAULT_COLORS = ['#0f172a', '#3b82f6', '#8b5cf6', '#000000'];
 
@@ -261,10 +262,57 @@ const generateFarbveloPalette = (count, vibrancy = 'vibrant') => {
   return newColors;
 };
 
+const generateFettePalette = (count, vibrancy = 'vibrant') => {
+  const centerHue = Math.random() * 360;
+  const hueCycle = vibrancy === 'subtle' ? 0.05 + Math.random() * 0.1 :
+                   vibrancy === 'normal' ? 0.15 + Math.random() * 0.2 :
+                                          0.3  + Math.random() * 0.4;
+
+  const curveAccent = vibrancy === 'subtle' ? 0 :
+                      vibrancy === 'normal' ? Math.random() * 0.15 :
+                                             Math.random() * 0.3;
+
+  const minSaturationLight = vibrancy === 'subtle'
+    ? [0.1, 0.4]
+    : vibrancy === 'normal'
+    ? [0.2, 0.2]
+    : [0.4, 0.1];
+
+  const maxSaturationLight = vibrancy === 'subtle'
+    ? [0.4, 0.8]
+    : vibrancy === 'normal'
+    ? [0.8, 0.85]
+    : [1.0, 0.9];
+
+  const curveMethods = ['arc', 'pow', 'powY', 'easeInOutSine', 'easeInOutCubic'];
+  const curveMethod = curveMethods[Math.floor(Math.random() * curveMethods.length)];
+
+  const ramp = generateRandomColorRamp({
+    total: count,
+    centerHue,
+    hueCycle,
+    curveAccent,
+    curveMethod,
+    minSaturationLight,
+    maxSaturationLight,
+    colorModel: 'hsl',
+  });
+
+  // base colors are the mid-tones – closest to what the existing generators produce
+  const baseHSL = ramp.base.slice(0, count);
+
+  return baseHSL.map(([h, s, l]) => {
+    // fettepalette returns HSL with s and l as 0–1 fractions
+    const rgb = rybHsl2rgb([h, s, l]);
+    return rgbToHex(rgb[0], rgb[1], rgb[2]);
+  });
+};
+
 const generateRandomPalette = (count, vibrancy = 'vibrant') => {
-  return Math.random() > 0.5 
-    ? generateHarmonicPalette(count, vibrancy) 
-    : generateFarbveloPalette(count, vibrancy);
+  const r = Math.random();
+  if (r < 0.34) return generateHarmonicPalette(count, vibrancy);
+  if (r < 0.67) return generateFarbveloPalette(count, vibrancy);
+  return generateFettePalette(count, vibrancy);
 };
 
 function TakiSlider({ value, min = 0, max = 100, step = 1, onChange }) {
