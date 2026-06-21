@@ -175,6 +175,15 @@ const generateHarmonicPalette = (count, vibrancy = 'vibrant') => {
   return newColors;
 };
 
+const shuffleArray = (array) => {
+  const newArr = [...array];
+  for (let i = newArr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+  }
+  return newArr;
+};
+
 const generateFarbveloPalette = (count, vibrancy = 'vibrant') => {
   const baseHue = Math.floor(Math.random() * 360);
   const minHueDiffAngle = Math.floor(Math.random() * (360 / count)) + 10;
@@ -261,14 +270,14 @@ const generateFarbveloPalette = (count, vibrancy = 'vibrant') => {
     newColors.push(rgbToHex(rgb[0], rgb[1], rgb[2]));
   }
   
-  return newColors;
+  return shuffleArray(newColors);
 };
 
 const generateFettePalette = (count, vibrancy = 'vibrant') => {
   const centerHue = Math.random() * 360;
   const hueCycle = vibrancy === 'subtle' ? 0.05 + Math.random() * 0.1 :
-                   vibrancy === 'normal' ? 0.15 + Math.random() * 0.2 :
-                                          0.3  + Math.random() * 0.4;
+                   vibrancy === 'normal' ? 0.3 + Math.random() * 0.4 :
+                                          0.6  + Math.random() * 0.8;
 
   const curveAccent = vibrancy === 'subtle' ? 0 :
                       vibrancy === 'normal' ? Math.random() * 0.15 :
@@ -277,14 +286,14 @@ const generateFettePalette = (count, vibrancy = 'vibrant') => {
   const minSaturationLight = vibrancy === 'subtle'
     ? [0.1, 0.4]
     : vibrancy === 'normal'
-    ? [0.2, 0.2]
-    : [0.4, 0.1];
+    ? [0.4, 0.2]
+    : [0.7, 0.05];
 
   const maxSaturationLight = vibrancy === 'subtle'
     ? [0.4, 0.8]
     : vibrancy === 'normal'
     ? [0.8, 0.85]
-    : [1.0, 0.9];
+    : [1.0, 0.95];
 
   const curveMethods = ['arc', 'pow', 'powY', 'easeInOutSine', 'easeInOutCubic'];
   const curveMethod = curveMethods[Math.floor(Math.random() * curveMethods.length)];
@@ -303,7 +312,7 @@ const generateFettePalette = (count, vibrancy = 'vibrant') => {
   // base colors are the mid-tones – closest to what the existing generators produce
   const baseHSL = ramp.base.slice(0, count);
 
-  return baseHSL.map(([h, s, l]) => {
+  return shuffleArray(baseHSL).map(([h, s, l]) => {
     // fettepalette returns HSL with s and l as 0–1 fractions
     const rgb = rybHsl2rgb([h, s, l]);
     return rgbToHex(rgb[0], rgb[1], rgb[2]);
@@ -315,21 +324,21 @@ const generateRampensauPalette = (count, vibrancy = 'vibrant') => {
   // hCycles: how much the hue rotates across the ramp
   const hCycles = vibrancy === 'subtle' ? (Math.random() * 0.3) - 0.15 :
                   vibrancy === 'normal' ? (Math.random() * 0.8) - 0.4 :
-                                         (Math.random() * 2) - 1;
+                                         (Math.random() * 1.5) + 0.5;
 
   // sRange: [minSat, maxSat] as 0–1 fractions
   const sRange = vibrancy === 'subtle'
     ? [0.15 + Math.random() * 0.15, 0.3 + Math.random() * 0.15]
     : vibrancy === 'normal'
-    ? [0.3 + Math.random() * 0.2, 0.55 + Math.random() * 0.2]
-    : [0.55 + Math.random() * 0.2, 0.85 + Math.random() * 0.15];
+    ? [0.4 + Math.random() * 0.2, 0.7 + Math.random() * 0.2]
+    : [0.7 + Math.random() * 0.2, 0.95 + Math.random() * 0.05];
 
   // lRange: [minLight, maxLight] spanning dark→light across the ramp
   const lRange = vibrancy === 'subtle'
     ? [0.35 + Math.random() * 0.15, 0.7 + Math.random() * 0.15]
     : vibrancy === 'normal'
     ? [0.15 + Math.random() * 0.2, 0.8 + Math.random() * 0.15]
-    : [0.05 + Math.random() * 0.15, 0.9 + Math.random() * 0.08];
+    : [0.05 + Math.random() * 0.1, 0.95 + Math.random() * 0.05];
 
   const curveMethods = ['lamé', 'sine', 'power', 'linear'];
   const curveMethod = curveMethods[Math.floor(Math.random() * curveMethods.length)];
@@ -345,7 +354,7 @@ const generateRampensauPalette = (count, vibrancy = 'vibrant') => {
     curveAccent,
   });
 
-  return ramp.map(([h, s, l]) => {
+  return shuffleArray(ramp).map(([h, s, l]) => {
     const rgb = rybHsl2rgb([h, s, l]);
     return rgbToHex(rgb[0], rgb[1], rgb[2]);
   });
@@ -365,7 +374,18 @@ const generatePolinePalette = (count, vibrancy = 'vibrant') => {
   }
 
   const startHue = Math.random() * 360;
-  const anchorColors = randomHSLPair(startHue, saturations, lightnesses);
+  
+  let anchorColors;
+  if (vibrancy === 'vibrant') {
+    const h1 = startHue;
+    const h2 = (startHue + 120 + Math.random() * 120) % 360;
+    anchorColors = [
+      [h1, saturations[0] + Math.random() * (saturations[1] - saturations[0]), lightnesses[0] + Math.random() * (lightnesses[1] - lightnesses[0])],
+      [h2, saturations[0] + Math.random() * (saturations[1] - saturations[0]), lightnesses[0] + Math.random() * (lightnesses[1] - lightnesses[0])]
+    ];
+  } else {
+    anchorColors = randomHSLPair(startHue, saturations, lightnesses);
+  }
 
   const funcs = Object.values(positionFunctions);
   const positionFunction = funcs[Math.floor(Math.random() * funcs.length)];
@@ -376,7 +396,7 @@ const generatePolinePalette = (count, vibrancy = 'vibrant') => {
     positionFunction,
   });
 
-  return poline.colors.slice(0, count).map(([h, s, l]) => {
+  return shuffleArray(poline.colors.slice(0, count)).map(([h, s, l]) => {
     const rgb = rybHsl2rgb([h, s, l]);
     return rgbToHex(rgb[0], rgb[1], rgb[2]);
   });
