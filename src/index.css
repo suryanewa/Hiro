@@ -542,62 +542,6 @@ body {
   background-color: var(--text-muted);
 }
 
-/* Zoom Controls UI */
-.zoom-controls {
-  position: absolute;
-  bottom: 24px;
-  right: 24px;
-  background-color: var(--bg-sidebar);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
-  z-index: 10;
-  backdrop-filter: blur(10px);
-}
-
-.zoom-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px;
-  border-radius: var(--radius-sm);
-  transition: all 0.2s var(--ease-standard);
-}
-
-.zoom-btn:hover:not(:disabled) {
-  color: var(--text-main);
-  background-color: var(--bg-panel);
-}
-
-.zoom-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.zoom-text {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-main);
-  padding: 0 8px;
-  min-width: 54px;
-  text-align: center;
-  user-select: none;
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  transition: background-color 0.2s var(--ease-standard);
-}
-
-.zoom-text:hover {
-  background-color: var(--bg-panel);
-}
 
 /* Taki Color Picker styles */
 .color-picker-trigger-btn {

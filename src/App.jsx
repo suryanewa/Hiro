@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Download, RefreshCw, Plus, Trash2, Monitor, Smartphone, Square, Layout, ZoomIn, ZoomOut, Maximize, Check, ChevronDown } from 'lucide-react';
+import { Download, RefreshCw, Plus, Trash2, Monitor, Smartphone, Square, Layout, Check, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ColorPicker,
@@ -525,9 +525,44 @@ function App() {
         e.preventDefault();
         randomize();
       }
+
+      // Keyboard zoom shortcuts: Cmd/Ctrl + =/+/ -/_/0
+      if ((e.metaKey || e.ctrlKey) && (e.key === '=' || e.key === '+' || e.key === '-' || e.key === '_' || e.key === '0')) {
+        e.preventDefault();
+        if (e.key === '=' || e.key === '+') {
+          setZoom(prev => Math.min(4.0, prev + 0.25));
+        } else if (e.key === '-' || e.key === '_') {
+          setZoom(prev => Math.max(0.25, prev - 0.25));
+        } else if (e.key === '0') {
+          setZoom(1);
+        }
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e) => {
+      // Check for Cmd/Ctrl key (or trackpad pinch gesture which emulates ctrlKey on macOS)
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const zoomIntensity = 0.005;
+        const delta = -e.deltaY * zoomIntensity;
+        setZoom((prevZoom) => {
+          const nextZoom = prevZoom * (1 + delta);
+          return Math.min(4.0, Math.max(0.25, nextZoom));
+        });
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
   }, []);
 
   const handleExport = () => {
@@ -744,40 +779,7 @@ function App() {
           )}
         </div>
 
-        {/* Zoom Controls */}
-        <div className="zoom-controls">
-          <button 
-            className="zoom-btn" 
-            onClick={() => setZoom(prev => Math.max(0.25, prev - 0.25))}
-            disabled={zoom <= 0.25}
-            title="Zoom Out"
-          >
-            <ZoomOut size={16} />
-          </button>
-          <span 
-            className="zoom-text" 
-            onClick={() => setZoom(1)}
-            title="Reset Zoom (Fit)"
-          >
-            {Math.round(zoom * 100)}%
-          </span>
-          <button 
-            className="zoom-btn" 
-            onClick={() => setZoom(prev => Math.min(4.0, prev + 0.25))}
-            disabled={zoom >= 4.0}
-            title="Zoom In"
-          >
-            <ZoomIn size={16} />
-          </button>
-          <button 
-            className="zoom-btn" 
-            onClick={() => setZoom(1)}
-            disabled={zoom === 1}
-            title="Fit to Screen"
-          >
-            <Maximize size={16} />
-          </button>
-        </div>
+
       </div>
     </div>
   );
