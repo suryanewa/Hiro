@@ -340,7 +340,7 @@ const generateRampensauPalette = (count, vibrancy = 'vibrant') => {
     ? [0.15 + Math.random() * 0.2, 0.8 + Math.random() * 0.15]
     : [0.05 + Math.random() * 0.1, 0.95 + Math.random() * 0.05];
 
-  const curveMethods = ['lamé', 'sine', 'power', 'linear'];
+  const curveMethods = ['lamé', 'arc', 'pow', 'powY', 'powX'];
   const curveMethod = curveMethods[Math.floor(Math.random() * curveMethods.length)];
   const curveAccent = 0.1 + Math.random() * 1.5;
 
