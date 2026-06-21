@@ -583,6 +583,13 @@ function App() {
   const highlightedRatio = hoveredRatio !== null ? hoveredRatio : activeRatio.label;
   const highlightedPreset = hoveredPreset !== null ? hoveredPreset : activePreset;
 
+  const activeContainerHeight = Math.max(containerHeight, 300);
+  const renderScale = (activeContainerHeight / activeRatio.height) * zoom;
+  const canvasWidth = activeRatio.width * renderScale;
+  const canvasHeight = activeRatio.height * renderScale;
+  const wrapperWidth = canvasWidth + 96;
+  const wrapperHeight = canvasHeight + 96;
+
   return (
     <div className="app-container">
       {/* Sidebar Controls */}
@@ -747,8 +754,14 @@ function App() {
       {/* Main Canvas Area */}
       <div className="main-content">
         <div className="preview-scroll-container" ref={containerRef}>
-          <div className="preview-content-wrapper">
-            <div style={{ display: activeShader === 'none' ? 'block' : 'none' }}>
+          <div 
+            className="preview-content-wrapper"
+            style={{
+              width: `${wrapperWidth}px`,
+              height: `${wrapperHeight}px`,
+            }}
+          >
+            <div className="canvas-absolute-center" style={{ display: activeShader === 'none' ? 'block' : 'none' }}>
               <GradientCanvas 
                 ref={canvasRef}
                 colors={colors}
@@ -767,16 +780,18 @@ function App() {
             </div>
 
             {activeShader !== 'none' && (
-              <ShaderPreview 
-                ref={shaderRef}
-                shaderType={activeShader}
-                presetName={activePreset}
-                imageUrl={gradientDataUrl}
-                width={activeRatio.width}
-                height={activeRatio.height}
-                zoom={zoom}
-                containerHeight={containerHeight}
-              />
+              <div className="canvas-absolute-center">
+                <ShaderPreview 
+                  ref={shaderRef}
+                  shaderType={activeShader}
+                  presetName={activePreset}
+                  imageUrl={gradientDataUrl}
+                  width={activeRatio.width}
+                  height={activeRatio.height}
+                  zoom={zoom}
+                  containerHeight={containerHeight}
+                />
+              </div>
             )}
           </div>
         </div>
