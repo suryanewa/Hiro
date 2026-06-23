@@ -17,7 +17,7 @@ const SHADER_COMPONENTS = {
   'water': { Component: Water, presets: waterPresets.filter(p => p.name !== 'Slow-mo' && p.name !== 'Abstract') },
   'image-dithering': { Component: ImageDithering, presets: imageDitheringPresets.filter(p => p.name !== 'Default' && p.name !== 'Noise' && p.name !== 'Retro') },
   'halftone-dots': { Component: HalftoneDots, presets: halftoneDotsPresets.filter(p => p.name !== 'Default' && p.name !== 'LED screen' && p.name !== 'Round and square') },
-  'halftone-cmyk': { Component: HalftoneCmyk, presets: halftoneCmykPresets.filter(p => p.name !== 'Newspaper' && p.name !== 'Drops') }
+  'halftone-cmyk': { Component: HalftoneCmyk, presets: halftoneCmykPresets.filter(p => p.name !== 'Newspaper' && p.name !== 'Drops' && p.name !== 'Vintage') }
 };
 
 const ShaderPreview = forwardRef(({ shaderType, presetName, imageUrl, width, height, zoom = 1, containerHeight }, ref) => {

@@ -24,7 +24,7 @@ export const SHADER_PRESETS = Object.freeze({
   water: waterPresets.filter((p) => p.name !== 'Slow-mo' && p.name !== 'Abstract'),
   'image-dithering': imageDitheringPresets.filter((p) => p.name !== 'Default' && p.name !== 'Noise' && p.name !== 'Retro'),
   'halftone-dots': halftoneDotsPresets.filter((p) => p.name !== 'Default' && p.name !== 'LED screen' && p.name !== 'Round and square'),
-  'halftone-cmyk': halftoneCmykPresets.filter((p) => p.name !== 'Newspaper' && p.name !== 'Drops'),
+  'halftone-cmyk': halftoneCmykPresets.filter((p) => p.name !== 'Newspaper' && p.name !== 'Drops' && p.name !== 'Vintage'),
 });
 
 export const SHADER_VALUES = Object.freeze(SHADER_OPTIONS.map((option) => option.value));
