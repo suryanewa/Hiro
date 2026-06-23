@@ -160,6 +160,24 @@ test('renders SVG blur filters and blend modes for richer configs', () => {
   assert.match(svg, /mix-blend-mode:screen/);
 });
 
+test('renders deterministic but seed-distinct layered SVG geometry', () => {
+  const config = {
+    colors: ['#0f172a', '#3b82f6', '#8b5cf6', '#f97316'],
+    width: 640,
+    height: 360,
+    isBlurred: true,
+    blurStrength: 55,
+    blendMode: 'dynamic',
+  };
+  const first = renderGradientAsSvg({ ...config, seed: 0.123 });
+  const second = renderGradientAsSvg({ ...config, seed: 0.123 });
+  const different = renderGradientAsSvg({ ...config, seed: 0.456 });
+
+  assert.equal(first, second);
+  assert.notEqual(first, different);
+  assert.ok((first.match(/<path/g) ?? []).length >= 10);
+});
+
 test('escapes generated HTML metadata', () => {
   const html = createGradientHtml({
     colors: ['#0f172a', '#3b82f6'],
