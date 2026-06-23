@@ -62,6 +62,24 @@ test('creates deterministic seeded random configs', () => {
   assert.equal(first.height, 1080);
 });
 
+test('randomizes blur strength between 35 and 75 inclusive', () => {
+  const createConfigWithBlurRandom = (blurRandom) => {
+    const randomValues = [0, blurRandom];
+    return createRandomGradientConfig({
+      random: () => randomValues.shift() ?? blurRandom,
+      colors: ['#0f172a', '#3b82f6'],
+      count: 2,
+      vibrancy: 'normal',
+      ratio: '16:9',
+      includeShader: false,
+      rendererSeed: 0.5,
+    });
+  };
+
+  assert.equal(createConfigWithBlurRandom(0).blurStrength, 35);
+  assert.equal(createConfigWithBlurRandom(0.999).blurStrength, 75);
+});
+
 test('rejects invalid random generation options', () => {
   let error;
   assert.throws(() => {
