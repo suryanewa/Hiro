@@ -487,6 +487,7 @@ function App() {
     setIsBlurred(nextConfig.isBlurred);
     setVibrancy(randomVibrancy);
     setBlendMode(nextConfig.blendMode);
+    setShowRing(nextConfig.showRing);
     setActiveShader(nextConfig.activeShader);
     setActivePreset(nextConfig.activePreset);
   }, []);

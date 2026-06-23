@@ -80,6 +80,29 @@ test('randomizes blur strength between 35 and 75 inclusive', () => {
   assert.equal(createConfigWithBlurRandom(0.999).blurStrength, 75);
 });
 
+test('randomizes frame visibility unless explicitly provided', () => {
+  const createConfigWithFrameRandom = (frameRandom, options = {}) => {
+    const randomValues = [0, frameRandom];
+    return createRandomGradientConfig({
+      random: () => randomValues.shift() ?? frameRandom,
+      colors: ['#0f172a', '#3b82f6'],
+      count: 2,
+      vibrancy: 'normal',
+      ratio: '16:9',
+      includeShader: false,
+      rendererSeed: 0.5,
+      blurStrength: 55,
+      blendMode: 'source-over',
+      ...options,
+    });
+  };
+
+  assert.equal(createConfigWithFrameRandom(0).showRing, false);
+  assert.equal(createConfigWithFrameRandom(0.999).showRing, true);
+  assert.equal(createConfigWithFrameRandom(0.999, { showRing: false }).showRing, false);
+  assert.equal(createConfigWithFrameRandom(0, { showRing: true }).showRing, true);
+});
+
 test('rejects invalid random generation options', () => {
   let error;
   assert.throws(() => {

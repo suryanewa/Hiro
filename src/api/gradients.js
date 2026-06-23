@@ -87,7 +87,7 @@ export function createRandomGradientConfig(options = {}) {
     isBlurred: options.isBlurred ?? true,
     blurStrength: options.blurStrength ?? randomInt(35, 75, random),
     blendMode: options.blendMode ?? randomChoice(BLEND_MODES, random).value,
-    showRing: options.showRing ?? false,
+    showRing: options.showRing ?? random() >= 0.5,
     activeShader: options.activeShader ?? shaderSelection.shader,
     activePreset: options.activePreset ?? shaderSelection.preset,
     presetParams: options.presetParams ?? preset?.params ?? shaderSelection.presetParams,
