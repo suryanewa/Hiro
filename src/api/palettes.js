@@ -2,7 +2,75 @@ import { generateRandomColorRamp } from 'fettepalette';
 import { generateColorRampWithCurve } from 'rampensau';
 import { Poline, positionFunctions, randomHSLPair } from 'poline';
 import { rybHsl2rgb } from 'rybitten';
+import { PALETTE_MOOD_OPTIONS } from './constants.js';
 import { randomChoice, shuffleArray, withMathRandom } from './random.js';
+
+const MOOD_VALUES = PALETTE_MOOD_OPTIONS
+  .map((option) => option.value)
+  .filter((value) => value !== 'random');
+
+const MOOD_PROFILES = Object.freeze({
+  neon: {
+    anchors: ['#00f5ff', '#ff2bd6', '#8b5cf6', '#00ff85', '#fff500', '#ff5f1f'],
+    chromaBoost: 1.2,
+    hueJitter: 16,
+    lightnessJitter: 0.08,
+  },
+  jewel: {
+    anchors: ['#0f766e', '#1d4ed8', '#7e22ce', '#be123c', '#b45309', '#059669'],
+    chromaBoost: 1.05,
+    hueJitter: 12,
+    lightnessJitter: 0.06,
+  },
+  candy: {
+    anchors: ['#ff7ab6', '#7dd3fc', '#c084fc', '#fef08a', '#86efac', '#fb7185'],
+    chromaBoost: 1.08,
+    hueJitter: 14,
+    lightnessJitter: 0.05,
+  },
+  cyberpunk: {
+    anchors: ['#020617', '#00e5ff', '#f000ff', '#fde047', '#7c3aed', '#22c55e'],
+    chromaBoost: 1.22,
+    hueJitter: 18,
+    lightnessJitter: 0.09,
+  },
+  sunset: {
+    anchors: ['#7c2d12', '#ea580c', '#facc15', '#db2777', '#6d28d9', '#fdf2f8'],
+    chromaBoost: 1,
+    hueJitter: 10,
+    lightnessJitter: 0.07,
+  },
+  mineral: {
+    anchors: ['#0f172a', '#155e75', '#14b8a6', '#a3e635', '#c084fc', '#f8fafc'],
+    chromaBoost: 0.92,
+    hueJitter: 10,
+    lightnessJitter: 0.06,
+  },
+  editorial: {
+    anchors: ['#111827', '#f9fafb', '#ef4444', '#2563eb', '#f59e0b', '#10b981'],
+    chromaBoost: 0.98,
+    hueJitter: 8,
+    lightnessJitter: 0.05,
+  },
+  vapor: {
+    anchors: ['#312e81', '#8b5cf6', '#f0abfc', '#67e8f9', '#fb7185', '#fef3c7'],
+    chromaBoost: 1.05,
+    hueJitter: 12,
+    lightnessJitter: 0.07,
+  },
+  botanical: {
+    anchors: ['#052e16', '#15803d', '#84cc16', '#facc15', '#14b8a6', '#f0fdf4'],
+    chromaBoost: 0.95,
+    hueJitter: 9,
+    lightnessJitter: 0.06,
+  },
+  'monochrome-luxe': {
+    anchors: ['#030712', '#1f2937', '#f8fafc', '#d4af37', '#7f1d1d', '#334155'],
+    chromaBoost: 0.85,
+    hueJitter: 5,
+    lightnessJitter: 0.04,
+  },
+});
 
 export const rgbToHex = (r, g, b) => {
   const f = (x) => Math.round(x * 255).toString(16).padStart(2, '0');
@@ -23,6 +91,13 @@ const rgbChannelToLinear = (value) => {
   return channel <= 0.03928
     ? channel / 12.92
     : Math.pow((channel + 0.055) / 1.055, 2.4);
+};
+
+const linearChannelToRgb = (value) => {
+  const channel = value <= 0.0031308
+    ? 12.92 * value
+    : 1.055 * Math.pow(value, 1 / 2.4) - 0.055;
+  return Math.min(1, Math.max(0, channel));
 };
 
 const getRelativeLuminance = ({ r, g, b }) => (
@@ -60,6 +135,56 @@ export const rgbToHslVals = ({ r, g, b }) => {
   return { h: hue * 360, s: saturation, l: lightness };
 };
 
+const rgbToOklabVals = ({ r, g, b }) => {
+  const red = rgbChannelToLinear(r);
+  const green = rgbChannelToLinear(g);
+  const blue = rgbChannelToLinear(b);
+  const l = Math.cbrt(0.4122214708 * red + 0.5363325363 * green + 0.0514459929 * blue);
+  const m = Math.cbrt(0.2119034982 * red + 0.6806995451 * green + 0.1073969566 * blue);
+  const s = Math.cbrt(0.0883024619 * red + 0.2817188376 * green + 0.6299787005 * blue);
+
+  return {
+    l: 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+    a: 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+    b: 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s,
+  };
+};
+
+export const rgbToOklchVals = (rgb) => {
+  const lab = rgbToOklabVals(rgb);
+  const hue = Math.atan2(lab.b, lab.a) * 180 / Math.PI;
+  return {
+    l: lab.l,
+    c: Math.sqrt(lab.a * lab.a + lab.b * lab.b),
+    h: hue < 0 ? hue + 360 : hue,
+  };
+};
+
+const oklabToRgbVals = ({ l, a, b }) => {
+  const lPrime = l + 0.3963377774 * a + 0.2158037573 * b;
+  const mPrime = l - 0.1055613458 * a - 0.0638541728 * b;
+  const sPrime = l - 0.0894841775 * a - 1.2914855480 * b;
+  const l3 = lPrime * lPrime * lPrime;
+  const m3 = mPrime * mPrime * mPrime;
+  const s3 = sPrime * sPrime * sPrime;
+
+  return {
+    r: Math.round(linearChannelToRgb(4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3) * 255),
+    g: Math.round(linearChannelToRgb(-1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3) * 255),
+    b: Math.round(linearChannelToRgb(-0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3) * 255),
+  };
+};
+
+const oklchToHex = ({ l, c, h }) => {
+  const radians = h * Math.PI / 180;
+  const rgb = oklabToRgbVals({
+    l,
+    a: Math.cos(radians) * c,
+    b: Math.sin(radians) * c,
+  });
+  return rgbToHex(rgb.r / 255, rgb.g / 255, rgb.b / 255);
+};
+
 const hslToHex = ({ h, s, l }) => {
   const hue = (((h % 360) + 360) % 360) / 360;
   const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
@@ -84,15 +209,61 @@ const hueBetween = (hue, start, end) => {
     : normalized >= start || normalized <= end;
 };
 
+const circularHueDistance = (a, b) => {
+  const diff = Math.abs((((a - b) % 360) + 540) % 360 - 180);
+  return diff;
+};
+
+const paletteToColorMetrics = (palette) => palette.map((hex) => {
+  const rgb = hexToRgbVals(hex);
+  const hsl = rgbToHslVals(rgb);
+  const oklch = rgbToOklchVals(rgb);
+  return {
+    hex,
+    rgb,
+    ...hsl,
+    oklch,
+    luminance: getRelativeLuminance(rgb),
+  };
+});
+
+const mixRgb = (a, b, t) => ({
+  r: Math.round(a.r + (b.r - a.r) * t),
+  g: Math.round(a.g + (b.g - a.g) * t),
+  b: Math.round(a.b + (b.b - a.b) * t),
+});
+
+const scoreGradientBlends = (colors) => {
+  if (colors.length < 2) return { blendScore: 0, collapseCount: 0 };
+
+  const samples = [];
+  for (let i = 0; i < colors.length - 1; i++) {
+    for (const t of [0.25, 0.5, 0.75]) {
+      samples.push(paletteToColorMetrics([rgbToHex(
+        mixRgb(colors[i].rgb, colors[i + 1].rgb, t).r / 255,
+        mixRgb(colors[i].rgb, colors[i + 1].rgb, t).g / 255,
+        mixRgb(colors[i].rgb, colors[i + 1].rgb, t).b / 255,
+      )])[0]);
+    }
+  }
+
+  const collapseCount = samples.filter((color) => (
+    color.oklch.c < 0.045 ||
+    (color.s < 0.28 && color.l > 0.18 && color.l < 0.84) ||
+    (hueBetween(color.h, 25, 72) && color.s < 0.5 && color.l > 0.2 && color.l < 0.72)
+  )).length;
+  const avgBlendChroma = samples.reduce((sum, color) => sum + color.oklch.c, 0) / samples.length;
+  const blendLightnessSpan = Math.max(...samples.map((color) => color.oklch.l)) -
+    Math.min(...samples.map((color) => color.oklch.l));
+
+  return {
+    blendScore: avgBlendChroma * 1.8 + blendLightnessSpan * 0.5 - collapseCount * 0.18,
+    collapseCount,
+  };
+};
+
 export const scorePaletteVividness = (palette) => {
-  const colors = palette.map((hex) => {
-    const rgb = hexToRgbVals(hex);
-    const hsl = rgbToHslVals(rgb);
-    return {
-      ...hsl,
-      luminance: getRelativeLuminance(rgb),
-    };
-  });
+  const colors = paletteToColorMetrics(palette);
 
   if (colors.length === 0) {
     return { score: 0, vivid: false, muddyCount: 0, dullCount: 0 };
@@ -100,11 +271,20 @@ export const scorePaletteVividness = (palette) => {
 
   const saturations = colors.map((color) => color.s);
   const luminances = colors.map((color) => color.luminance);
+  const chromas = colors.map((color) => color.oklch.c);
+  const oklchLightnesses = colors.map((color) => color.oklch.l);
   const avgSaturation = saturations.reduce((sum, value) => sum + value, 0) / saturations.length;
+  const avgChroma = chromas.reduce((sum, value) => sum + value, 0) / chromas.length;
   const maxSaturation = Math.max(...saturations);
   const minSaturation = Math.min(...saturations);
   const lightnessSpan = Math.max(...colors.map((color) => color.l)) - Math.min(...colors.map((color) => color.l));
+  const perceptualLightnessSpan = Math.max(...oklchLightnesses) - Math.min(...oklchLightnesses);
   const luminanceSpan = Math.max(...luminances) - Math.min(...luminances);
+  const hueDistances = colors.flatMap((color, index) => (
+    colors.slice(index + 1).map((other) => circularHueDistance(color.oklch.h, other.oklch.h))
+  ));
+  const hueSpread = hueDistances.length ? Math.max(...hueDistances) / 180 : 0;
+  const closeHuePairs = hueDistances.filter((distance) => distance < 16).length;
   const muddyCount = colors.filter((color) => {
     const dirtyYellowBrown = hueBetween(color.h, 34, 66) && color.l > 0.22 && color.l < 0.74 && color.s < 0.82;
     const oliveBrown = hueBetween(color.h, 58, 92) && color.l > 0.2 && color.l < 0.58 && color.s < 0.74;
@@ -113,16 +293,24 @@ export const scorePaletteVividness = (palette) => {
   }).length;
   const dullCount = colors.filter((color) => (
     color.s < 0.36 ||
+    color.oklch.c < 0.055 ||
     (color.s < 0.48 && color.l > 0.2 && color.l < 0.82)
   )).length;
+  const { blendScore, collapseCount } = scoreGradientBlends(colors);
   const score = (
     avgSaturation * 0.38 +
     maxSaturation * 0.24 +
     minSaturation * 0.12 +
     lightnessSpan * 0.12 +
-    luminanceSpan * 0.14 -
+    luminanceSpan * 0.14 +
+    avgChroma * 1.1 +
+    perceptualLightnessSpan * 0.28 +
+    hueSpread * 0.18 +
+    blendScore -
     muddyCount * 0.35 -
-    dullCount * 0.2
+    dullCount * 0.2 -
+    collapseCount * 0.22 -
+    closeHuePairs * 0.05
   );
 
   return {
@@ -130,12 +318,16 @@ export const scorePaletteVividness = (palette) => {
     vivid: avgSaturation >= 0.52 &&
       maxSaturation >= 0.72 &&
       minSaturation >= 0.32 &&
+      avgChroma >= 0.09 &&
       lightnessSpan >= 0.14 &&
+      perceptualLightnessSpan >= 0.13 &&
       luminanceSpan >= 0.18 &&
       muddyCount === 0 &&
-      dullCount === 0,
+      dullCount === 0 &&
+      collapseCount === 0,
     muddyCount,
     dullCount,
+    collapseCount,
   };
 };
 
@@ -164,6 +356,78 @@ function polishVividPalette(palette) {
 
     return hslToHex({ h, s: Math.min(1, s), l });
   });
+}
+
+function resolveMood(mood, random = Math.random) {
+  if (!mood || mood === 'random') return randomChoice(MOOD_VALUES, random);
+  return MOOD_PROFILES[mood] ? mood : randomChoice(MOOD_VALUES, random);
+}
+
+function mutateHexByMood(hex, profile, random) {
+  const hsl = rgbToHslVals(hexToRgbVals(hex));
+  const hue = hsl.h + (random() * 2 - 1) * profile.hueJitter;
+  const saturation = Math.min(1, Math.max(0.2, hsl.s * profile.chromaBoost + (random() * 0.12 - 0.04)));
+  const lightness = Math.min(0.96, Math.max(0.08, hsl.l + (random() * 2 - 1) * profile.lightnessJitter));
+  return hslToHex({ h: hue, s: saturation, l: lightness });
+}
+
+function generateMoodPalette(count, vibrancy = 'vibrant', random = Math.random, mood = 'random') {
+  const moodName = resolveMood(mood, random);
+  const profile = MOOD_PROFILES[moodName];
+  const anchors = shuffleArray(profile.anchors, random);
+  const colors = [];
+
+  for (let i = 0; i < count; i++) {
+    const base = anchors[i % anchors.length];
+    colors.push(mutateHexByMood(base, profile, random));
+  }
+
+  if (vibrancy === 'subtle') {
+    return rebalancePalette(colors.map((hex) => {
+      const oklch = rgbToOklchVals(hexToRgbVals(hex));
+      return oklchToHex({
+        h: oklch.h,
+        c: Math.max(0.035, oklch.c * 0.72),
+        l: Math.min(0.9, Math.max(0.18, oklch.l + (random() * 0.08 - 0.02))),
+      });
+    }), random);
+  }
+
+  return rebalancePalette(colors, random);
+}
+
+function rebalancePalette(palette, random = Math.random) {
+  if (palette.length < 3) return palette;
+
+  const colors = paletteToColorMetrics(palette);
+  const darkest = colors.reduce((best, color) => color.oklch.l < best.oklch.l ? color : best, colors[0]);
+  const lightest = colors.reduce((best, color) => color.oklch.l > best.oklch.l ? color : best, colors[0]);
+  const chromatic = colors.reduce((best, color) => color.oklch.c > best.oklch.c ? color : best, colors[0]);
+  const balanced = [...palette];
+
+  if (Math.max(...colors.map((color) => color.oklch.l)) - Math.min(...colors.map((color) => color.oklch.l)) < 0.28) {
+    balanced[0] = oklchToHex({
+      h: darkest.oklch.h,
+      c: Math.min(0.28, Math.max(0.06, darkest.oklch.c * 1.05)),
+      l: Math.max(0.08, darkest.oklch.l - 0.18),
+    });
+    balanced[balanced.length - 1] = oklchToHex({
+      h: lightest.oklch.h,
+      c: Math.min(0.18, Math.max(0.035, lightest.oklch.c * 0.8)),
+      l: Math.min(0.94, lightest.oklch.l + 0.16),
+    });
+  }
+
+  if (Math.max(...colors.map((color) => color.oklch.c)) < 0.12) {
+    const accentIndex = Math.max(1, Math.floor(random() * balanced.length));
+    balanced[accentIndex] = oklchToHex({
+      h: (chromatic.oklch.h + 120 + random() * 80) % 360,
+      c: 0.18 + random() * 0.08,
+      l: 0.56 + random() * 0.18,
+    });
+  }
+
+  return balanced;
 }
 
 export const generateHarmonicPalette = (count, vibrancy = 'vibrant', random = Math.random) => {
@@ -450,18 +714,25 @@ export const generatePolinePalette = (count, vibrancy = 'vibrant', random = Math
   });
 };
 
-export const generateRandomPalette = (count, vibrancy = 'vibrant', random = Math.random) => {
+export const generateRandomPalette = (count, vibrancy = 'vibrant', random = Math.random, mood = 'random') => {
+  if (mood && mood !== 'random' && random() < 0.72) {
+    return generateMoodPalette(count, vibrancy, random, mood);
+  }
+
   const r = random();
-  if (r < 0.2) return generateHarmonicPalette(count, vibrancy, random);
-  if (r < 0.4) return generateFarbveloPalette(count, vibrancy, random);
-  if (r < 0.6) return generateFettePalette(count, vibrancy, random);
-  if (r < 0.8) return generateRampensauPalette(count, vibrancy, random);
-  return generatePolinePalette(count, vibrancy, random);
+  const palette = r < 0.16 ? generateHarmonicPalette(count, vibrancy, random) :
+    r < 0.32 ? generateFarbveloPalette(count, vibrancy, random) :
+      r < 0.48 ? generateFettePalette(count, vibrancy, random) :
+        r < 0.64 ? generateRampensauPalette(count, vibrancy, random) :
+          r < 0.8 ? generatePolinePalette(count, vibrancy, random) :
+            generateMoodPalette(count, vibrancy, random, mood);
+
+  return rebalancePalette(palette, random);
 };
 
 export const calculatePaletteDistance = (pal1, pal2) => {
-  const rgb1 = pal1.map(hexToRgbVals);
-  const rgb2 = pal2.map(hexToRgbVals);
+  const colors1 = paletteToColorMetrics(pal1);
+  const colors2 = paletteToColorMetrics(pal2);
 
   const distDirection = (a, b) => {
     let totalDist = 0;
@@ -469,9 +740,9 @@ export const calculatePaletteDistance = (pal1, pal2) => {
       let minDist = Infinity;
       b.forEach((c2) => {
         const d = Math.sqrt(
-          Math.pow(c1.r - c2.r, 2) +
-          Math.pow(c1.g - c2.g, 2) +
-          Math.pow(c1.b - c2.b, 2),
+          Math.pow((c1.oklch.l - c2.oklch.l) * 180, 2) +
+          Math.pow((c1.oklch.c - c2.oklch.c) * 420, 2) +
+          Math.pow(circularHueDistance(c1.oklch.h, c2.oklch.h) * 1.15, 2),
         );
         if (d < minDist) minDist = d;
       });
@@ -480,7 +751,19 @@ export const calculatePaletteDistance = (pal1, pal2) => {
     return totalDist / a.length;
   };
 
-  return (distDirection(rgb1, rgb2) + distDirection(rgb2, rgb1)) / 2;
+  return (distDirection(colors1, colors2) + distDirection(colors2, colors1)) / 2;
+};
+
+const normalizePaletteHistory = (previousPalettes) => {
+  if (!previousPalettes) return [];
+  const palettes = Array.isArray(previousPalettes[0]) ? previousPalettes : [previousPalettes];
+  return palettes.filter((palette) => Array.isArray(palette) && palette.length > 0);
+};
+
+const calculateHistoryDistance = (candidate, previousPalettes) => {
+  const history = normalizePaletteHistory(previousPalettes);
+  if (history.length === 0) return 180;
+  return Math.min(...history.map((palette) => calculatePaletteDistance(candidate, palette)));
 };
 
 export const generateVividPalette = (
@@ -489,19 +772,19 @@ export const generateVividPalette = (
   random = Math.random,
   previousColors = null,
   maxAttempts = 12,
+  mood = 'random',
 ) => {
-  let bestPalette = generateRandomPalette(count, vibrancy === 'subtle' ? 'normal' : vibrancy, random);
+  let bestPalette = generateRandomPalette(count, vibrancy === 'subtle' ? 'normal' : vibrancy, random, mood);
   let bestScore = -Infinity;
   const attempts = Math.max(1, maxAttempts);
+  const history = normalizePaletteHistory(previousColors);
 
   for (let i = 0; i < attempts; i++) {
     const candidate = i === 0
       ? bestPalette
-      : generateRandomPalette(count, vibrancy === 'subtle' ? 'normal' : vibrancy, random);
+      : generateRandomPalette(count, vibrancy === 'subtle' ? 'normal' : vibrancy, random, mood);
     const vividness = scorePaletteVividness(candidate);
-    const distance = previousColors?.length
-      ? calculatePaletteDistance(candidate, previousColors)
-      : 180;
+    const distance = calculateHistoryDistance(candidate, history);
     const score = vividness.score + Math.min(180, distance) / 900;
 
     if (score > bestScore) {
@@ -509,7 +792,7 @@ export const generateVividPalette = (
       bestPalette = candidate;
     }
 
-    if (vividness.vivid && (!previousColors?.length || distance > 110)) {
+    if (vividness.vivid && (history.length === 0 || distance > 110)) {
       return candidate;
     }
   }
@@ -527,15 +810,23 @@ export const generateVividPalette = (
   ].slice(0, count), random);
 };
 
-export const generateDifferentPalette = (count, vibrancy, previousColors, maxAttempts = 6, random = Math.random) => {
-  if (!previousColors || previousColors.length === 0) return generateRandomPalette(count, vibrancy, random);
+export const generateDifferentPalette = (
+  count,
+  vibrancy,
+  previousColors,
+  maxAttempts = 6,
+  random = Math.random,
+  mood = 'random',
+) => {
+  const history = normalizePaletteHistory(previousColors);
+  if (history.length === 0) return generateRandomPalette(count, vibrancy, random, mood);
 
-  let bestPalette = generateRandomPalette(count, vibrancy, random);
+  let bestPalette = generateRandomPalette(count, vibrancy, random, mood);
   let maxDistance = -1;
 
   for (let i = 0; i < maxAttempts; i++) {
-    const candidate = generateRandomPalette(count, vibrancy, random);
-    const distance = calculatePaletteDistance(candidate, previousColors);
+    const candidate = generateRandomPalette(count, vibrancy, random, mood);
+    const distance = calculateHistoryDistance(candidate, history);
 
     if (distance > 130) {
       return candidate;

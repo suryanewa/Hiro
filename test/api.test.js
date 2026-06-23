@@ -3,6 +3,7 @@ import test from 'node:test';
 import { createApiServer } from '../api/http.js';
 import {
   buildOpenApiSpec,
+  calculatePaletteDistance,
   createGradientConfig,
   createGradientHtml,
   createRandomGradientConfig,
@@ -73,6 +74,15 @@ test('filters vivid-only palettes away from dull and muddy colors', () => {
   assert.ok(muddyScore.muddyCount > 0 || muddyScore.dullCount > 0);
 });
 
+test('penalizes palettes that collapse when blended', () => {
+  const flatScore = scorePaletteVividness(['#6b5a45', '#80705d', '#94816c']);
+  const vividScore = scorePaletteVividness(['#ff2d75', '#00d4ff', '#7c3cff', '#00e676']);
+
+  assert.equal(flatScore.vivid, false);
+  assert.ok(flatScore.collapseCount > 0 || flatScore.dullCount > 0 || flatScore.muddyCount > 0);
+  assert.ok(vividScore.score > flatScore.score);
+});
+
 test('creates deterministic vivid-only random configs', () => {
   const first = createRandomGradientConfig({
     seed: 'vivid',
@@ -93,6 +103,50 @@ test('creates deterministic vivid-only random configs', () => {
 
   assert.deepEqual(first, second);
   assert.equal(isVividPalette(first.colors), true);
+});
+
+test('creates deterministic mood-driven random configs', () => {
+  const first = createRandomGradientConfig({
+    seed: 'mood',
+    count: 5,
+    vibrancy: 'vibrant',
+    mood: 'cyberpunk',
+    ratio: '1:1',
+    includeShader: false,
+    vividOnly: true,
+  });
+  const second = createRandomGradientConfig({
+    seed: 'mood',
+    count: 5,
+    vibrancy: 'vibrant',
+    mood: 'cyberpunk',
+    ratio: '1:1',
+    includeShader: false,
+    vividOnly: true,
+  });
+
+  assert.deepEqual(first, second);
+  assert.equal(first.colors.length, 5);
+  assert.equal(isVividPalette(first.colors), true);
+});
+
+test('uses recent palettes when seeking different colors', () => {
+  const history = [
+    ['#ff2d75', '#00d4ff', '#7c3cff'],
+    ['#0f172a', '#3b82f6', '#8b5cf6'],
+  ];
+  const config = createRandomGradientConfig({
+    seed: 'history',
+    count: 3,
+    vibrancy: 'vibrant',
+    mood: 'jewel',
+    ratio: '1:1',
+    includeShader: false,
+    recentPalettes: history,
+    maxAttempts: 12,
+  });
+
+  assert.ok(history.every((palette) => calculatePaletteDistance(config.colors, palette) > 40));
 });
 
 test('randomizes blur strength between 35 and 75 inclusive', () => {
@@ -345,6 +399,7 @@ test('exposes metadata', () => {
   const metadata = listGradientMetadata();
   assert.equal(metadata.name, 'gradients');
   assert.ok(metadata.ratios.some((ratio) => ratio.label === '16:9'));
+  assert.ok(metadata.paletteMoods.some((mood) => mood.value === 'cyberpunk'));
   assert.ok(metadata.shaderPresets['paper-texture'].length > 0);
 });
 
@@ -358,11 +413,13 @@ test('OpenAPI spec mirrors runtime metadata', () => {
   assert.deepEqual(gradientInput.blendMode.enum, metadata.canvasBlendModes);
   assert.deepEqual(gradientInput.activeShader.enum, metadata.shaders.map((shader) => shader.value));
   assert.deepEqual(randomInput.vibrancy.enum, metadata.vibrancy.map((option) => option.value));
+  assert.deepEqual(randomInput.mood.enum, metadata.paletteMoods.map((option) => option.value));
   assert.equal(gradientInput.colors.minItems, metadata.limits.minColors);
   assert.equal(gradientInput.colors.maxItems, metadata.limits.maxColors);
   assert.equal(gradientInput.frameThickness.minimum, metadata.limits.minFrameThickness);
   assert.equal(gradientInput.frameThickness.maximum, metadata.limits.maxFrameThickness);
   assert.equal(randomInput.previousColors.maxItems, metadata.limits.maxColors);
+  assert.equal(randomInput.recentPalettes.maxItems, 8);
   assert.equal(randomInput.vividOnly.type, 'boolean');
   assert.equal(randomInput.maxAttempts.minimum, 1);
   assert.equal(randomInput.maxAttempts.maximum, 12);

@@ -28,6 +28,7 @@ import {
   BLEND_MODES,
   DEFAULT_COLORS,
   LIMITS,
+  PALETTE_MOOD_OPTIONS,
   RATIOS,
   SHADER_OPTIONS,
   SHADER_PRESETS,
@@ -291,6 +292,7 @@ function App() {
   const [blurStrength, setBlurStrength] = useState(100);
   const [blendMode, setBlendMode] = useState('source-over');
   const [vibrancy, setVibrancy] = useState('vibrant');
+  const [paletteMood, setPaletteMood] = useState('random');
   const [vividOnly, setVividOnly] = useState(false);
   const [activeShader, setActiveShader] = useState('none');
   const [activePreset, setActivePreset] = useState('');
@@ -392,6 +394,7 @@ function App() {
   const frameThicknessRef = useRef(frameThickness);
   const isBlurredRef = useRef(isBlurred);
   const vibrancyRef = useRef(vibrancy);
+  const paletteMoodRef = useRef(paletteMood);
   const vividOnlyRef = useRef(vividOnly);
   const blendModeRef = useRef(blendMode);
   const lockedParamsRef = useRef(lockedParams);
@@ -404,6 +407,7 @@ function App() {
   frameThicknessRef.current = frameThickness;
   isBlurredRef.current = isBlurred;
   vibrancyRef.current = vibrancy;
+  paletteMoodRef.current = paletteMood;
   vividOnlyRef.current = vividOnly;
   blendModeRef.current = blendMode;
   lockedParamsRef.current = lockedParams;
@@ -476,12 +480,16 @@ function App() {
     const randomVibrancy = locks.vibrancy
       ? vibrancyRef.current
       : VIBRANCY_OPTIONS[Math.floor(Math.random() * VIBRANCY_OPTIONS.length)].value;
+    const randomPaletteMood = locks.paletteMood
+      ? paletteMoodRef.current
+      : PALETTE_MOOD_OPTIONS[Math.floor(Math.random() * PALETTE_MOOD_OPTIONS.length)].value;
     const randomVividOnly = locks.vividOnly
       ? vividOnlyRef.current
       : Math.random() >= 0.5;
     const prevColors = fast || locks.colors ? undefined : colorsRef.current;
     const nextConfig = createRandomGradientConfig({
       vibrancy: randomVibrancy,
+      mood: randomPaletteMood,
       previousColors: prevColors,
       colors: locks.colors ? colorsRef.current : undefined,
       blurStrength: locks.blurStrength ? blurStrengthRef.current : undefined,
@@ -499,6 +507,7 @@ function App() {
     setBlurStrength(nextConfig.blurStrength);
     setIsBlurred(nextConfig.isBlurred);
     setVibrancy(randomVibrancy);
+    setPaletteMood(randomPaletteMood);
     setVividOnly(randomVividOnly);
     setBlendMode(nextConfig.blendMode);
     setShowRing(nextConfig.showRing);
@@ -901,6 +910,24 @@ function App() {
               vividOnlyRef.current
                 ? generateVividPalette(prevColors.length, val, Math.random, prevColors)
                 : generateDifferentPalette(prevColors.length, val, prevColors)
+            ));
+          }}
+        />
+
+        <AnimatedSelect
+          label={(
+            <LockableLabel locked={!!lockedParams.paletteMood} onToggle={() => toggleParamLock('paletteMood')}>
+              Mood
+            </LockableLabel>
+          )}
+          value={paletteMood}
+          options={PALETTE_MOOD_OPTIONS}
+          onChange={(val) => {
+            setPaletteMood(val);
+            setColors(prevColors => (
+              vividOnlyRef.current
+                ? generateVividPalette(prevColors.length, vibrancyRef.current, Math.random, prevColors, undefined, val)
+                : generateDifferentPalette(prevColors.length, vibrancyRef.current, prevColors, undefined, Math.random, val)
             ));
           }}
         />

@@ -4,6 +4,7 @@ import {
   CANVAS_BLEND_MODES,
   DEFAULT_GRADIENT_CONFIG,
   LIMITS,
+  PALETTE_MOOD_OPTIONS,
   RATIOS,
   VIBRANCY_OPTIONS,
 } from './constants.js';
@@ -21,6 +22,7 @@ import {
   RANDOM_MAX_ATTEMPTS,
   createGradientConfig,
   validateRandomGradientOptions,
+  validatePaletteMood,
   validateVibrancy,
 } from './validation.js';
 
@@ -45,6 +47,7 @@ export function listGradientMetadata() {
     blendModes: BLEND_MODES,
     canvasBlendModes: CANVAS_BLEND_MODES,
     vibrancy: VIBRANCY_OPTIONS,
+    paletteMoods: PALETTE_MOOD_OPTIONS,
     shaders: SHADER_OPTIONS,
     shaderPresets: listShaderPresetMetadata(),
     defaults: DEFAULT_GRADIENT_CONFIG,
@@ -61,10 +64,12 @@ export function createRandomGradientConfig(options = {}) {
     Math.max(LIMITS.minColors, Number.isFinite(requestedCount) ? Math.round(requestedCount) : fallbackCount),
   );
   const vibrancy = validateVibrancy(options.vibrancy) ? options.vibrancy : randomChoice(VIBRANCY_OPTIONS, random).value;
+  const mood = validatePaletteMood(options.mood) ? options.mood : 'random';
   const ratio = resolveRatio(options.ratio ?? options.ratioLabel, random);
   const shaderSelection = options.includeShader === false
     ? { shader: 'none', preset: '', presetParams: {} }
     : pickRandomShaderSelection(random, { includeNone: options.includeNone !== false });
+  const paletteHistory = options.recentPalettes ?? options.previousColors;
   const colors = Array.isArray(options.colors)
     ? options.colors
     : options.vividOnly
@@ -72,18 +77,20 @@ export function createRandomGradientConfig(options = {}) {
         count,
         vibrancy,
         random,
-        options.previousColors,
+        paletteHistory,
         options.maxAttempts ?? RANDOM_MAX_ATTEMPTS.default,
+        mood,
       )
-      : options.previousColors
+      : paletteHistory
         ? generateDifferentPalette(
           count,
           vibrancy,
-          options.previousColors,
+          paletteHistory,
           options.maxAttempts ?? RANDOM_MAX_ATTEMPTS.default,
           random,
+          mood,
         )
-        : generateRandomPalette(count, vibrancy, random);
+        : generateRandomPalette(count, vibrancy, random, mood);
   const preset = getShaderPreset(shaderSelection.shader, shaderSelection.preset);
 
   return createGradientConfig({

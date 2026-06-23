@@ -2,6 +2,7 @@ import {
   API_VERSION,
   CANVAS_BLEND_MODES,
   LIMITS,
+  PALETTE_MOOD_OPTIONS,
   RATIOS,
   VIBRANCY_OPTIONS,
 } from './constants.js';
@@ -36,6 +37,7 @@ function renderPath() {
 export function buildOpenApiSpec({ baseUrl = 'http://localhost:8787' } = {}) {
   const ratioLabels = RATIOS.map((ratio) => ratio.label);
   const vibrancyValues = VIBRANCY_OPTIONS.map((option) => option.value);
+  const paletteMoodValues = PALETTE_MOOD_OPTIONS.map((option) => option.value);
 
   return {
     openapi: '3.1.0',
@@ -209,11 +211,21 @@ export function buildOpenApiSpec({ baseUrl = 'http://localhost:8787' } = {}) {
             seed: { oneOf: [{ type: 'string' }, { type: 'number' }] },
             count: { type: 'integer', minimum: LIMITS.minColors, maximum: LIMITS.maxColors },
             vibrancy: { type: 'string', enum: vibrancyValues },
+            mood: { type: 'string', enum: paletteMoodValues },
             ratio: { type: 'string', enum: ['random', ...ratioLabels] },
             previousColors: {
               type: 'array',
               maxItems: LIMITS.maxColors,
               items: { type: 'string', pattern: HEX_COLOR_PATTERN },
+            },
+            recentPalettes: {
+              type: 'array',
+              maxItems: 8,
+              items: {
+                type: 'array',
+                maxItems: LIMITS.maxColors,
+                items: { type: 'string', pattern: HEX_COLOR_PATTERN },
+              },
             },
             includeShader: { type: 'boolean' },
             includeNone: { type: 'boolean' },

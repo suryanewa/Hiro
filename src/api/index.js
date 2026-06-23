@@ -5,6 +5,7 @@ export {
   DEFAULT_COLORS,
   DEFAULT_GRADIENT_CONFIG,
   LIMITS,
+  PALETTE_MOOD_OPTIONS,
   RATIOS,
   VIBRANCY_OPTIONS,
 } from './constants.js';
@@ -23,6 +24,7 @@ export {
   scorePaletteVividness,
   rgbToHex,
   rgbToHslVals,
+  rgbToOklchVals,
 } from './palettes.js';
 export {
   createGradientConfig,
@@ -44,6 +46,7 @@ export {
   isHexColor,
   normalizeGradientConfig,
   normalizeHexColor,
+  validatePaletteMood,
   validateVibrancy,
 } from './validation.js';
 export { buildOpenApiSpec } from './openapi.js';

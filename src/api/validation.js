@@ -2,6 +2,7 @@ import {
   CANVAS_BLEND_MODES,
   DEFAULT_GRADIENT_CONFIG,
   LIMITS,
+  PALETTE_MOOD_OPTIONS,
   RATIOS,
   VIBRANCY_OPTIONS,
 } from './constants.js';
@@ -10,6 +11,7 @@ import { SHADER_VALUES, getShaderPreset } from './shaders.js';
 const HEX_COLOR_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 const BLEND_MODE_VALUES = new Set(CANVAS_BLEND_MODES);
 const VIBRANCY_VALUES = new Set(VIBRANCY_OPTIONS.map((option) => option.value));
+const PALETTE_MOOD_VALUES = new Set(PALETTE_MOOD_OPTIONS.map((option) => option.value));
 const SHADER_VALUE_SET = new Set(SHADER_VALUES);
 const RANDOM_RATIO_VALUES = new Set(['random', ...RATIOS.map((ratio) => ratio.label)]);
 
@@ -182,6 +184,10 @@ export function validateVibrancy(value) {
   return VIBRANCY_VALUES.has(value);
 }
 
+export function validatePaletteMood(value) {
+  return PALETTE_MOOD_VALUES.has(value);
+}
+
 export function normalizeGradientConfig(input = {}) {
   const source = isPlainObject(input) ? input : {};
   const errors = [];
@@ -285,6 +291,13 @@ export function validateRandomGradientOptions(input = {}) {
     });
   }
 
+  if (hasOwnValue(source, 'mood') && !PALETTE_MOOD_VALUES.has(source.mood)) {
+    errors.push({
+      field: 'mood',
+      message: `mood must be one of: ${PALETTE_MOOD_OPTIONS.map((option) => option.value).join(', ')}.`,
+    });
+  }
+
   for (const field of ['ratio', 'ratioLabel']) {
     if (hasOwnValue(source, field) && !RANDOM_RATIO_VALUES.has(source[field])) {
       errors.push({
@@ -319,6 +332,38 @@ export function validateRandomGradientOptions(input = {}) {
           return color;
         }
         return normalized;
+      });
+    }
+  }
+
+  if (hasOwnValue(source, 'recentPalettes')) {
+    if (!Array.isArray(source.recentPalettes)) {
+      errors.push({ field: 'recentPalettes', message: 'recentPalettes must be an array of palettes.' });
+    } else {
+      options.recentPalettes = source.recentPalettes.slice(0, 8).map((palette, paletteIndex) => {
+        if (!Array.isArray(palette)) {
+          errors.push({ field: `recentPalettes.${paletteIndex}`, message: 'Each recent palette must be an array.' });
+          return [];
+        }
+
+        if (palette.length > LIMITS.maxColors) {
+          errors.push({
+            field: `recentPalettes.${paletteIndex}`,
+            message: `Each recent palette must contain no more than ${LIMITS.maxColors} values.`,
+          });
+        }
+
+        return palette.slice(0, LIMITS.maxColors).map((color, colorIndex) => {
+          const normalized = normalizeHexColor(color);
+          if (!normalized) {
+            errors.push({
+              field: `recentPalettes.${paletteIndex}.${colorIndex}`,
+              message: 'Color must be a #rgb or #rrggbb hex string.',
+            });
+            return color;
+          }
+          return normalized;
+        });
       });
     }
   }

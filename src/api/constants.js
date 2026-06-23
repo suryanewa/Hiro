@@ -36,6 +36,20 @@ export const VIBRANCY_OPTIONS = Object.freeze([
   { label: 'Vibrant', value: 'vibrant' },
 ]);
 
+export const PALETTE_MOOD_OPTIONS = Object.freeze([
+  { label: 'Any', value: 'random' },
+  { label: 'Neon', value: 'neon' },
+  { label: 'Jewel', value: 'jewel' },
+  { label: 'Candy', value: 'candy' },
+  { label: 'Cyberpunk', value: 'cyberpunk' },
+  { label: 'Sunset', value: 'sunset' },
+  { label: 'Mineral', value: 'mineral' },
+  { label: 'Editorial', value: 'editorial' },
+  { label: 'Vapor', value: 'vapor' },
+  { label: 'Botanical', value: 'botanical' },
+  { label: 'Monochrome Luxe', value: 'monochrome-luxe' },
+]);
+
 export const DEFAULT_GRADIENT_CONFIG = Object.freeze({
   colors: DEFAULT_COLORS,
   width: 1920,
