@@ -11,12 +11,12 @@ export const RATIOS = Object.freeze([
 
 export const BLEND_MODES = Object.freeze([
   { label: 'Normal', value: 'source-over' },
-  { label: 'Dynamic (Mix)', value: 'dynamic' },
-  { label: 'Screen (Glowing)', value: 'screen' },
-  { label: 'Multiply (Deep)', value: 'multiply' },
-  { label: 'Overlay (Contrast)', value: 'overlay' },
-  { label: 'Color Dodge (Vibrant)', value: 'color-dodge' },
-  { label: 'Exclusion (Experimental)', value: 'exclusion' },
+  { label: 'Dynamic', value: 'dynamic' },
+  { label: 'Screen', value: 'screen' },
+  { label: 'Multiply', value: 'multiply' },
+  { label: 'Overlay', value: 'overlay' },
+  { label: 'Color Dodge', value: 'color-dodge' },
+  { label: 'Exclusion', value: 'exclusion' },
 ]);
 
 export const CANVAS_BLEND_MODES = Object.freeze([

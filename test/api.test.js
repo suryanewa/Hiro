@@ -6,9 +6,11 @@ import {
   createGradientConfig,
   createGradientHtml,
   createRandomGradientConfig,
+  isVividPalette,
   listGradientMetadata,
   normalizeGradientConfig,
   renderGradientAsSvg,
+  scorePaletteVividness,
 } from '../src/api/index.js';
 import {
   dataUrlToBytes,
@@ -60,6 +62,37 @@ test('creates deterministic seeded random configs', () => {
   assert.equal(first.colors.length, 4);
   assert.equal(first.width, 1080);
   assert.equal(first.height, 1080);
+});
+
+test('filters vivid-only palettes away from dull and muddy colors', () => {
+  assert.equal(isVividPalette(['#806020', '#9a7a32', '#6f6a55']), false);
+  assert.equal(isVividPalette(['#777777', '#8a8a8a', '#a0a0a0']), false);
+  assert.equal(isVividPalette(['#ff2d75', '#00d4ff', '#7c3cff', '#00e676']), true);
+
+  const muddyScore = scorePaletteVividness(['#806020', '#9a7a32', '#6f6a55']);
+  assert.ok(muddyScore.muddyCount > 0 || muddyScore.dullCount > 0);
+});
+
+test('creates deterministic vivid-only random configs', () => {
+  const first = createRandomGradientConfig({
+    seed: 'vivid',
+    count: 4,
+    vibrancy: 'normal',
+    ratio: '1:1',
+    includeShader: false,
+    vividOnly: true,
+  });
+  const second = createRandomGradientConfig({
+    seed: 'vivid',
+    count: 4,
+    vibrancy: 'normal',
+    ratio: '1:1',
+    includeShader: false,
+    vividOnly: true,
+  });
+
+  assert.deepEqual(first, second);
+  assert.equal(isVividPalette(first.colors), true);
 });
 
 test('randomizes blur strength between 35 and 75 inclusive', () => {
@@ -133,6 +166,7 @@ test('rejects invalid random generation options', () => {
         ratio: '4:3',
         includeShader: 'yes',
         includeNone: null,
+        vividOnly: 'yes',
         previousColors: ['#000000', '#111111', '#222222', '#333333', '#444444', '#555555', '#666666'],
         maxAttempts: 99,
       });
@@ -148,6 +182,7 @@ test('rejects invalid random generation options', () => {
     'ratio',
     'includeShader',
     'includeNone',
+    'vividOnly',
     'previousColors',
     'maxAttempts',
   ]);
@@ -328,6 +363,7 @@ test('OpenAPI spec mirrors runtime metadata', () => {
   assert.equal(gradientInput.frameThickness.minimum, metadata.limits.minFrameThickness);
   assert.equal(gradientInput.frameThickness.maximum, metadata.limits.maxFrameThickness);
   assert.equal(randomInput.previousColors.maxItems, metadata.limits.maxColors);
+  assert.equal(randomInput.vividOnly.type, 'boolean');
   assert.equal(randomInput.maxAttempts.minimum, 1);
   assert.equal(randomInput.maxAttempts.maximum, 12);
 });

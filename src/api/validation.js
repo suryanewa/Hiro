@@ -294,7 +294,7 @@ export function validateRandomGradientOptions(input = {}) {
     }
   }
 
-  for (const field of ['includeShader', 'includeNone']) {
+  for (const field of ['includeShader', 'includeNone', 'vividOnly']) {
     if (hasOwnValue(source, field) && typeof source[field] !== 'boolean') {
       errors.push({ field, message: `${field} must be a boolean.` });
     }

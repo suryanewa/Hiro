@@ -18,6 +18,154 @@ export const hexToRgbVals = (hex) => {
   } : { r: 0, g: 0, b: 0 };
 };
 
+const rgbChannelToLinear = (value) => {
+  const channel = value / 255;
+  return channel <= 0.03928
+    ? channel / 12.92
+    : Math.pow((channel + 0.055) / 1.055, 2.4);
+};
+
+const getRelativeLuminance = ({ r, g, b }) => (
+  0.2126 * rgbChannelToLinear(r) +
+  0.7152 * rgbChannelToLinear(g) +
+  0.0722 * rgbChannelToLinear(b)
+);
+
+export const rgbToHslVals = ({ r, g, b }) => {
+  const red = r / 255;
+  const green = g / 255;
+  const blue = b / 255;
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+  const lightness = (max + min) / 2;
+  const delta = max - min;
+
+  if (delta === 0) {
+    return { h: 0, s: 0, l: lightness };
+  }
+
+  const saturation = lightness > 0.5
+    ? delta / (2 - max - min)
+    : delta / (max + min);
+  let hue;
+
+  if (max === red) {
+    hue = ((green - blue) / delta + (green < blue ? 6 : 0)) / 6;
+  } else if (max === green) {
+    hue = ((blue - red) / delta + 2) / 6;
+  } else {
+    hue = ((red - green) / delta + 4) / 6;
+  }
+
+  return { h: hue * 360, s: saturation, l: lightness };
+};
+
+const hslToHex = ({ h, s, l }) => {
+  const hue = (((h % 360) + 360) % 360) / 360;
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const channel = (offset) => {
+    let t = hue + offset;
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+
+  return rgbToHex(channel(1 / 3), channel(0), channel(-1 / 3));
+};
+
+const hueBetween = (hue, start, end) => {
+  const normalized = ((hue % 360) + 360) % 360;
+  return start <= end
+    ? normalized >= start && normalized <= end
+    : normalized >= start || normalized <= end;
+};
+
+export const scorePaletteVividness = (palette) => {
+  const colors = palette.map((hex) => {
+    const rgb = hexToRgbVals(hex);
+    const hsl = rgbToHslVals(rgb);
+    return {
+      ...hsl,
+      luminance: getRelativeLuminance(rgb),
+    };
+  });
+
+  if (colors.length === 0) {
+    return { score: 0, vivid: false, muddyCount: 0, dullCount: 0 };
+  }
+
+  const saturations = colors.map((color) => color.s);
+  const luminances = colors.map((color) => color.luminance);
+  const avgSaturation = saturations.reduce((sum, value) => sum + value, 0) / saturations.length;
+  const maxSaturation = Math.max(...saturations);
+  const minSaturation = Math.min(...saturations);
+  const lightnessSpan = Math.max(...colors.map((color) => color.l)) - Math.min(...colors.map((color) => color.l));
+  const luminanceSpan = Math.max(...luminances) - Math.min(...luminances);
+  const muddyCount = colors.filter((color) => {
+    const dirtyYellowBrown = hueBetween(color.h, 34, 66) && color.l > 0.22 && color.l < 0.74 && color.s < 0.82;
+    const oliveBrown = hueBetween(color.h, 58, 92) && color.l > 0.2 && color.l < 0.58 && color.s < 0.74;
+    const lowChromaBrown = hueBetween(color.h, 18, 48) && color.l > 0.18 && color.l < 0.62 && color.s < 0.62;
+    return dirtyYellowBrown || oliveBrown || lowChromaBrown;
+  }).length;
+  const dullCount = colors.filter((color) => (
+    color.s < 0.36 ||
+    (color.s < 0.48 && color.l > 0.2 && color.l < 0.82)
+  )).length;
+  const score = (
+    avgSaturation * 0.38 +
+    maxSaturation * 0.24 +
+    minSaturation * 0.12 +
+    lightnessSpan * 0.12 +
+    luminanceSpan * 0.14 -
+    muddyCount * 0.35 -
+    dullCount * 0.2
+  );
+
+  return {
+    score,
+    vivid: avgSaturation >= 0.52 &&
+      maxSaturation >= 0.72 &&
+      minSaturation >= 0.32 &&
+      lightnessSpan >= 0.14 &&
+      luminanceSpan >= 0.18 &&
+      muddyCount === 0 &&
+      dullCount === 0,
+    muddyCount,
+    dullCount,
+  };
+};
+
+export const isVividPalette = (palette) => scorePaletteVividness(palette).vivid;
+
+function polishVividPalette(palette) {
+  return palette.map((hex, index) => {
+    const hsl = rgbToHslVals(hexToRgbVals(hex));
+    let h = hsl.h;
+    let s = Math.max(0.7, hsl.s);
+    let l = Math.min(0.84, Math.max(0.18, hsl.l));
+
+    if (
+      (hueBetween(h, 34, 66) && l > 0.22 && l < 0.74 && s < 0.9) ||
+      (hueBetween(h, 58, 92) && l > 0.2 && l < 0.58 && s < 0.82) ||
+      (hueBetween(h, 18, 48) && l > 0.18 && l < 0.62 && s < 0.72)
+    ) {
+      h = index % 2 === 0 ? h - 36 : h + 92;
+      s = Math.max(0.82, s);
+      l = index % 2 === 0 ? Math.max(0.48, l) : Math.min(0.38, l);
+    }
+
+    if (index === palette.length - 1) {
+      l = l > 0.5 ? Math.min(0.94, l + 0.08) : Math.max(0.12, l - 0.08);
+    }
+
+    return hslToHex({ h, s: Math.min(1, s), l });
+  });
+}
+
 export const generateHarmonicPalette = (count, vibrancy = 'vibrant', random = Math.random) => {
   const baseHue = Math.floor(random() * 360);
   const baseSat = 65 + Math.floor(random() * 25);
@@ -333,6 +481,50 @@ export const calculatePaletteDistance = (pal1, pal2) => {
   };
 
   return (distDirection(rgb1, rgb2) + distDirection(rgb2, rgb1)) / 2;
+};
+
+export const generateVividPalette = (
+  count,
+  vibrancy = 'vibrant',
+  random = Math.random,
+  previousColors = null,
+  maxAttempts = 12,
+) => {
+  let bestPalette = generateRandomPalette(count, vibrancy === 'subtle' ? 'normal' : vibrancy, random);
+  let bestScore = -Infinity;
+  const attempts = Math.max(1, maxAttempts);
+
+  for (let i = 0; i < attempts; i++) {
+    const candidate = i === 0
+      ? bestPalette
+      : generateRandomPalette(count, vibrancy === 'subtle' ? 'normal' : vibrancy, random);
+    const vividness = scorePaletteVividness(candidate);
+    const distance = previousColors?.length
+      ? calculatePaletteDistance(candidate, previousColors)
+      : 180;
+    const score = vividness.score + Math.min(180, distance) / 900;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestPalette = candidate;
+    }
+
+    if (vividness.vivid && (!previousColors?.length || distance > 110)) {
+      return candidate;
+    }
+  }
+
+  const polished = polishVividPalette(bestPalette);
+  if (isVividPalette(polished)) return polished;
+
+  return shuffleArray([
+    '#ff2d75',
+    '#00d4ff',
+    '#7c3cff',
+    '#00e676',
+    '#ff6a00',
+    '#1748ff',
+  ].slice(0, count), random);
 };
 
 export const generateDifferentPalette = (count, vibrancy, previousColors, maxAttempts = 6, random = Math.random) => {

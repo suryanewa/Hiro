@@ -217,6 +217,7 @@ export function buildOpenApiSpec({ baseUrl = 'http://localhost:8787' } = {}) {
             },
             includeShader: { type: 'boolean' },
             includeNone: { type: 'boolean' },
+            vividOnly: { type: 'boolean' },
             maxAttempts: {
               type: 'integer',
               minimum: RANDOM_MAX_ATTEMPTS.min,

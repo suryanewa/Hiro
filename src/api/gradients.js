@@ -7,7 +7,7 @@ import {
   RATIOS,
   VIBRANCY_OPTIONS,
 } from './constants.js';
-import { generateDifferentPalette, generateRandomPalette } from './palettes.js';
+import { generateDifferentPalette, generateRandomPalette, generateVividPalette } from './palettes.js';
 import { createSeededRandom, randomChoice, randomInt } from './random.js';
 import {
   SHADER_OPTIONS,
@@ -67,15 +67,23 @@ export function createRandomGradientConfig(options = {}) {
     : pickRandomShaderSelection(random, { includeNone: options.includeNone !== false });
   const colors = Array.isArray(options.colors)
     ? options.colors
-    : options.previousColors
-      ? generateDifferentPalette(
+    : options.vividOnly
+      ? generateVividPalette(
         count,
         vibrancy,
+        random,
         options.previousColors,
         options.maxAttempts ?? RANDOM_MAX_ATTEMPTS.default,
-        random,
       )
-      : generateRandomPalette(count, vibrancy, random);
+      : options.previousColors
+        ? generateDifferentPalette(
+          count,
+          vibrancy,
+          options.previousColors,
+          options.maxAttempts ?? RANDOM_MAX_ATTEMPTS.default,
+          random,
+        )
+        : generateRandomPalette(count, vibrancy, random);
   const preset = getShaderPreset(shaderSelection.shader, shaderSelection.preset);
 
   return createGradientConfig({

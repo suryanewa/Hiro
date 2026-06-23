@@ -34,6 +34,7 @@ import {
   VIBRANCY_OPTIONS,
   createRandomGradientConfig,
   generateDifferentPalette,
+  generateVividPalette,
 } from './api/index.js';
 
 const RATIO_ICONS = {
@@ -290,6 +291,7 @@ function App() {
   const [blurStrength, setBlurStrength] = useState(100);
   const [blendMode, setBlendMode] = useState('source-over');
   const [vibrancy, setVibrancy] = useState('vibrant');
+  const [vividOnly, setVividOnly] = useState(false);
   const [activeShader, setActiveShader] = useState('none');
   const [activePreset, setActivePreset] = useState('');
   const [hoveredRatio, setHoveredRatio] = useState(null);
@@ -390,6 +392,7 @@ function App() {
   const frameThicknessRef = useRef(frameThickness);
   const isBlurredRef = useRef(isBlurred);
   const vibrancyRef = useRef(vibrancy);
+  const vividOnlyRef = useRef(vividOnly);
   const blendModeRef = useRef(blendMode);
   const lockedParamsRef = useRef(lockedParams);
   colorsRef.current = colors;
@@ -401,6 +404,7 @@ function App() {
   frameThicknessRef.current = frameThickness;
   isBlurredRef.current = isBlurred;
   vibrancyRef.current = vibrancy;
+  vividOnlyRef.current = vividOnly;
   blendModeRef.current = blendMode;
   lockedParamsRef.current = lockedParams;
 
@@ -472,6 +476,9 @@ function App() {
     const randomVibrancy = locks.vibrancy
       ? vibrancyRef.current
       : VIBRANCY_OPTIONS[Math.floor(Math.random() * VIBRANCY_OPTIONS.length)].value;
+    const randomVividOnly = locks.vividOnly
+      ? vividOnlyRef.current
+      : Math.random() >= 0.5;
     const prevColors = fast || locks.colors ? undefined : colorsRef.current;
     const nextConfig = createRandomGradientConfig({
       vibrancy: randomVibrancy,
@@ -484,6 +491,7 @@ function App() {
       activeShader: locks.shader ? activeShaderRef.current : undefined,
       activePreset: locks.shader ? activePresetRef.current : undefined,
       includeShader: locks.shader ? false : undefined,
+      vividOnly: randomVividOnly,
     });
 
     setColors(nextConfig.colors);
@@ -491,6 +499,7 @@ function App() {
     setBlurStrength(nextConfig.blurStrength);
     setIsBlurred(nextConfig.isBlurred);
     setVibrancy(randomVibrancy);
+    setVividOnly(randomVividOnly);
     setBlendMode(nextConfig.blendMode);
     setShowRing(nextConfig.showRing);
     setFrameThickness(nextConfig.frameThickness);
@@ -782,6 +791,17 @@ function App() {
         </header>
 
         <div className="control-group">
+          <TakiSwitch
+            label={(
+              <span onClick={(event) => event.stopPropagation()}>
+                <LockableLabel locked={!!lockedParams.vividOnly} onToggle={() => toggleParamLock('vividOnly')}>
+                  Vivid
+                </LockableLabel>
+              </span>
+            )}
+            checked={vividOnly}
+            onChange={setVividOnly}
+          />
           <div className="control-header">
             <LockableLabel locked={!!lockedParams.colors} onToggle={() => toggleParamLock('colors')}>
               Colors
@@ -877,7 +897,11 @@ function App() {
           options={VIBRANCY_OPTIONS}
           onChange={(val) => {
             setVibrancy(val);
-            setColors(prevColors => generateDifferentPalette(prevColors.length, val, prevColors));
+            setColors(prevColors => (
+              vividOnlyRef.current
+                ? generateVividPalette(prevColors.length, val, Math.random, prevColors)
+                : generateDifferentPalette(prevColors.length, val, prevColors)
+            ));
           }}
         />
 

@@ -17,8 +17,12 @@ export {
   generatePolinePalette,
   generateRampensauPalette,
   generateRandomPalette,
+  generateVividPalette,
   hexToRgbVals,
+  isVividPalette,
+  scorePaletteVividness,
   rgbToHex,
+  rgbToHslVals,
 } from './palettes.js';
 export {
   createGradientConfig,
